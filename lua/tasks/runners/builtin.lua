@@ -2,6 +2,12 @@ local Task = require("tasks.lib.task")
 
 local runner = {}
 
+local function wrap_task_fn(fn)
+	return function(_, args)
+		fn(unpack(args or {}))
+	end
+end
+
 function runner:create_task(spec, args)
 	local task
 
@@ -13,7 +19,7 @@ function runner:create_task(spec, args)
 		else
 			args = spec.vim_cmd
 		end
-		task = Task:new(vim.cmd, { args })
+		task = Task:new(wrap_task_fn(vim.cmd), { args })
 	end
 
 	return task

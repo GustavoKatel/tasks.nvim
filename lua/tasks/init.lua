@@ -17,12 +17,20 @@ M.state = {
 
 	-- Array<Task>
 	running_tasks = {},
+
+	task_seq_nr = 1,
 }
 
 function M.setup(config)
 	M.config = vim.tbl_extend("force", M.config, config or {})
 
 	M.config.runners.builtin = require("tasks.runners.builtin")
+end
+
+function M._get_task_id()
+	local id = M.state.task_seq_nr
+	M.state.task_seq_nr = M.state.task_seq_nr + 1
+	return id
 end
 
 function M.run(name, args)
@@ -43,10 +51,17 @@ function M.run(name, args)
 	local runner = M.config.runners[spec.runner or "builtin"]
 
 	local task = runner:create_task(spec, args)
+	local task_id = M._get_task_id()
+
+	M.state.running_tasks[task_id] = task
+
+	task:on_finish(function()
+		M.state.running_tasks[task_id] = nil
+	end)
 
 	task:run()
 
-	return task
+	return task_id
 end
 
 function M.reload_tasks()
