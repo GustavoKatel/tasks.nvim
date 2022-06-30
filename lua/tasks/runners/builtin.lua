@@ -7,11 +7,11 @@ function runner:create_task(spec, args)
 
 	if spec.fn ~= nil then
 		task = Task:new(spec.fn, args)
-	elseif spec.vcmd ~= nil then
+	elseif spec.vim_cmd ~= nil then
 		if args ~= nil then
-			args = spec.vcmd .. " " .. args
+			args = spec.vim_cmd .. " " .. args
 		else
-			args = spec.vcmd
+			args = spec.vim_cmd
 		end
 		task = Task:new(vim.cmd, { args })
 	end
