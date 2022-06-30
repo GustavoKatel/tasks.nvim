@@ -50,6 +50,7 @@ function M.run(name, args)
 end
 
 function M.reload_tasks()
+	-- PERF: should run all using plenary.run_all?
 	for name, source in pairs(M.config.sources) do
 		M.state.tasks[name] = source:get_tasks()
 	end
