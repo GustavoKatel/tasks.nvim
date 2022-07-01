@@ -1,3 +1,4 @@
+local pasync = require("plenary.async")
 local Task = require("tasks.lib.task")
 
 local M = {}
@@ -25,6 +26,8 @@ function M.setup(config)
 	M.config = vim.tbl_extend("force", M.config, config or {})
 
 	M.config.runners.builtin = require("tasks.runners.builtin")
+
+	M.reload_tasks()
 end
 
 function M._get_task_id()
@@ -65,10 +68,27 @@ function M.run(name, args)
 end
 
 function M.reload_tasks()
-	-- PERF: should run all using plenary.run_all?
-	for name, source in pairs(M.config.sources) do
-		M.state.tasks[name] = source:get_tasks()
-	end
+	pasync.run(function()
+		local sender, receiver = pasync.control.channel.mpsc()
+
+		-- get all sources at once
+		local fns = vim.tbl_map(function(source_name)
+			return function()
+				local source = M.config.sources[source_name]
+				sender.send(source_name, source:get_tasks())
+			end
+		end, vim.tbl_keys(M.config.sources))
+
+		table.insert(fns, function()
+			local name, tasks = receiver.recv()
+			while name ~= nil do
+				M.state.tasks[name] = tasks
+				name, tasks = receiver.recv()
+			end
+		end)
+
+		pasync.util.join(fns)
+	end)
 end
 
 local function filter_tasks(opts, tbl)
