@@ -1,13 +1,13 @@
 local M = {}
 
 function M.new_builtin_source(specs)
-	local source = {}
+    local source = {}
 
-	function source:get_tasks()
-		return specs
-	end
+    function source:get_specs()
+        return specs
+    end
 
-	return source
+    return source
 end
 
 return M
