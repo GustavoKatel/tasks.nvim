@@ -19,13 +19,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Checkout plenary
-        uses: actions/checkout@v3
-        with:
-          repository: "${{ env.plenary_org }}/plenary.nvim"
-          ref: ${{ env.plenary_branch || 'master' }}
-          path: ../plenary.nvim
-
       - name: Get today's date
         id: date
         run: |
@@ -46,9 +39,11 @@ jobs:
       - name: Prepare
         run: |
           mkdir -p ~/.local/share/nvim/site/pack/vendor/start
-          ln -s $GITHUB_WORKSPACE/../plenary.nvim ~/.local/share/nvim/site/pack/vendor/start/plenary.nvim
           ln -s $(pwd) ~/.local/share/nvim/site/pack/vendor/start
 
+      - name: Checkout plenary
+        run: |
+          git clone --branch ${{ env.plenary_branch }} --depth 1 https://github.com/${{ env.plenary_org }}/plenary.nvim ~/.local/share/nvim/site/pack/vendor/start/plenary.nvim
 
       - name: Run tests
         run: |
