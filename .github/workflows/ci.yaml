@@ -6,6 +6,10 @@ env:
   plenary_org: GustavoKatel
   plenary_branch: condvar-table-remove
 
+concurrency: 
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   unit_tests:
     name: Unit tests
