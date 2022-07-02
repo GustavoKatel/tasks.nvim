@@ -9,6 +9,7 @@ local function tasks_setup(config)
     tasks.state.specs = {}
     tasks.state.running_tasks = {}
     tasks.state.task_seq_nr = 1
+    tasks.state.last_spec_ran = nil
 
     tasks.setup(config)
 end
@@ -287,6 +288,22 @@ describe("init", function()
             local task_id, task = tasks.run("invalid_task")
             eq(nil, task_id)
             eq(nil, task)
+        end)
+
+        it("sets the last spec correctly", function()
+            local task_id, task = tasks.run("wait_stop_builtin")
+            eq(1, task_id)
+            task:request_stop()
+
+            eq("wait_stop_builtin", tasks.state.last_spec_ran.name)
+            eq(nil, tasks.state.last_spec_ran.args)
+            eq("test", tasks.state.last_spec_ran.source_name)
+
+            local new_task_id, new_task = tasks.run_last()
+            new_task:request_stop()
+            eq(2, new_task_id)
+            eq("wait_stop_builtin", task:get_spec_name())
+            eq("test", task:get_source_name())
         end)
     end)
 end)

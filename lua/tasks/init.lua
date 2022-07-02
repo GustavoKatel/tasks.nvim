@@ -19,6 +19,9 @@ M.state = {
     running_tasks = {},
 
     task_seq_nr = 1,
+
+    -- { name = <string>, source_name = <string> }
+    last_spec_ran = nil,
 }
 
 M._spec_listener_tx = nil
@@ -42,10 +45,11 @@ function M.run(name, args, source_name)
     local source
 
     if source_name == nil then
-        for source_name, source_specs in pairs(M.state.specs) do
+        for _source_name, source_specs in pairs(M.state.specs) do
             if source_specs[name] ~= nil then
                 spec = source_specs[name]
-                source = M.config.sources[source_name]
+                source = M.config.sources[_source_name]
+                source_name = _source_name
                 break
             end
         end
@@ -70,7 +74,13 @@ function M.run(name, args, source_name)
     local task = runner:create_task(spec, args)
     local task_id = M._get_task_id()
 
-    task:set_metadata({ spec = spec, source_name = source_name, runner_name = runner_name, task_id = task_id })
+    task:set_metadata({
+        spec = spec,
+        spec_name = name,
+        source_name = source_name,
+        runner_name = runner_name,
+        task_id = task_id,
+    })
 
     M.state.running_tasks[task_id] = task
 
@@ -82,7 +92,17 @@ function M.run(name, args, source_name)
 
     task:run()
 
+    M.state.last_spec_ran = { name = name, args = args, source_name = source_name }
+
     return task_id, task
+end
+
+function M.run_last()
+    if M.state.last_spec_ran == nil then
+        return
+    end
+
+    return M.run(M.state.last_spec_ran.name, M.state.last_spec_ran.args, M.state.last_spec_ran.source_name)
 end
 
 function M.reload_specs()

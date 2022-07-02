@@ -28,11 +28,13 @@ describe("task", function()
             pasync.util.sleep(500)
         end)
 
+        eq(nil, task:get_spec_name())
         eq(nil, task:get_source_name())
         eq(nil, task:get_runner_name())
 
-        task:set_metadata({ source_name = "test", runner_name = "test_runner" })
+        task:set_metadata({ source_name = "test", spec_name = "my_task", runner_name = "test_runner" })
 
+        eq("my_task", task:get_spec_name())
         eq("test", task:get_source_name())
         eq("test_runner", task:get_runner_name())
     end)

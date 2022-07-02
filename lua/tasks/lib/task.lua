@@ -6,7 +6,7 @@ function Task:new(async_fn, args)
     local t = {
         fn = async_fn,
         args = args,
-        metadata = { spec = nil, source_name = nil, runner_name = nil, task_id = nil },
+        metadata = { spec = nil, spec_name = nil, source_name = nil, runner_name = nil, task_id = nil },
         state = "ready",
         events = {},
         started_time = nil,
@@ -25,6 +25,14 @@ end
 
 function Task:set_metadata(metadata)
     self.metadata = metadata
+end
+
+function Task:get_spec_name()
+    if self.metadata == nil then
+        return nil
+    end
+
+    return self.metadata.spec_name
 end
 
 function Task:get_source_name()
