@@ -90,4 +90,12 @@ function Task:request_stop()
     self.stop_tx()
 end
 
+function Task:get_started_time()
+    return self.started_time
+end
+
+function Task:get_finished_time()
+    return self.finished_time
+end
+
 return Task
