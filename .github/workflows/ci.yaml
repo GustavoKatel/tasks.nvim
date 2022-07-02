@@ -1,0 +1,59 @@
+name: Tests
+
+on: [push, pull_request]
+
+env:
+  plenary_org: GustavoKatel
+  plenary_branch: condvar-table-remove
+
+jobs:
+  unit_tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - version: nightly
+          - version: 0.7.2
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Checkout plenary
+        uses: actions/checkout@v3
+        with:
+          repository: "${{ env.plenary_org }}/plenary.nvim"
+          ref: ${{ env.plenary_branch || 'master' }}
+          path: ../plenary.nvim
+
+      - name: Get today's date
+        id: date
+        run: |
+          echo "::set-output name=date::$(date +%F)"
+
+      - name: Restore from todays cache
+        uses: actions/cache@v3
+        id: cache
+        with:
+          path: _neovim
+          key: ${{ runner.os }}-${{ matrix.version }}-${{ steps.date.outputs.date }}
+
+      - name: Download neovim
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          curl -sL https://github.com/neovim/neovim/releases/download/${{ matrix.version }}/nvim-linux64.tar.gz | tar xzf - --strip-components=1 -C "${PWD}/_neovim"
+
+      - name: Prepare
+        run: |
+          mkdir -p ~/.local/share/nvim/site/pack/vendor/start
+          ln -s $GITHUB_WORKSPACE/../plenary.nvim ~/.local/share/nvim/site/pack/vendor/start/plenary.nvim
+          ln -s $(pwd) ~/.local/share/nvim/site/pack/vendor/start
+
+
+      - name: Run tests
+        run: |
+          export PATH="${PWD}/_neovim/bin:${PATH}"
+          export VIM="${PWD}/_neovim/share/nvim/runtime"
+          nvim --version
+          make test
+
