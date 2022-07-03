@@ -86,6 +86,7 @@ local function json_task_to_spec(index, json_task)
     }
 end
 
+-- TODO: parse tasks.json variables
 function M:get_specs(tx)
     local path = Path:new(vim.loop.cwd()) / ".vscode" / "tasks.json"
 

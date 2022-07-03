@@ -13,7 +13,20 @@ local function wrap_task_terminal(spec)
     return function(ctx)
         local tx, rx = pasync.control.channel.oneshot()
 
-        local cmd = table.concat(vim.tbl_flatten({ spec.cmd }), " ")
+        local env = spec.env or {}
+
+        local env_concat = table.concat(
+            vim.tbl_map(function(env_name)
+                return env_name .. "=" .. env[env_name]
+            end, vim.tbl_keys(env)),
+            " "
+        )
+
+        if env_concat ~= "" then
+            env_concat = env_concat .. " "
+        end
+
+        local cmd = table.concat(vim.tbl_flatten({ env_concat, spec.cmd }), " ")
 
         cmd = "edit term://" .. (spec.cwd or vim.loop.cwd()) .. "//" .. cmd
 

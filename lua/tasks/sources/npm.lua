@@ -20,6 +20,7 @@ function M:get_specs(tx)
         specs[name] = {
             cmd = cmd,
             cwd = vim.loop.cwd(),
+            env = { PATH = "$PATH:" .. vim.loop.cwd() .. "/node_modules/.bin" },
         }
     end
 
