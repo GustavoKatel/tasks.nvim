@@ -69,6 +69,8 @@ It will load all `package.json` scripts from the project root to be used as task
 
 It will load all tasks from `.vscode/tasks.json` to be used as task specs.
 
+There are bunch of things missing from the schema, I believe it's enough to get started. Please open an issue if you think any of the missing features should be added.
+
 ## Runners
 
 ### builtin
