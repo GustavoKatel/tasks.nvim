@@ -186,3 +186,82 @@ lualine.setup({
     ...
 })
 ```
+
+## API
+
+### tasks.run(spec_name, args, source_name)
+
+Run the first spec with name `spec_name` additionally passing extra args in `args`
+
+You can also pass `source_name` to refine the search and only run specs from that source.
+
+Returns `task_id` and a task table ([Task](#task-api))
+
+### tasks.run_last()
+
+Re-run the last spec with the same args passed in the last call to `tasks.run`
+
+Returns `task_id` and task table
+
+### tasks.get_specs({ source_name = nil, runner_name = nil })
+
+Get all the available specs. Optionally filter by spec name `spec_name` and runner name `runner_name`.
+
+Returns dictionary
+
+Example of return value:
+
+```lua
+{
+    ["my_source"] = {
+        ["spec_1"] = {
+            ...
+        },
+        ["spec_2"] = {
+            ...
+        }
+    },
+    [<source_name>] = {
+        [<spec_name>] = <spec>
+    }
+}
+```
+
+### tasks.get_running_tasks({ source_name = nil, runner_name = nil })
+
+Get all the tasks currently running. Optionally filter by spec name `spec_name` and runner name `runner_name`.
+
+Returns dictionary
+
+Example of return value:
+
+```lua
+{
+    [1] = <task>,
+    [2] = <task>,
+    ...
+    [<task_id>] = <task>
+}
+```
+
+### task api
+
+A task object has a few helper methods.
+
+### task:get_spec_name()
+
+### task:get_source_name()
+
+### task:get_runner_name()
+
+### task:get_state()
+
+Returns the current task state, which can evolve from `ready` -> `running` -> `done`.
+
+### task:request_stop()
+
+Signal the underlying job that this task should be cancelled.
+
+### task:get_started_time()
+
+### task:get_finished_time()
