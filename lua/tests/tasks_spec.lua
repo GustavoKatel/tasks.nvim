@@ -298,5 +298,80 @@ describe("init", function()
             eq("wait_stop_builtin", task:get_spec_name())
             eq("test", task:get_source_name())
         end)
+
+        it("makes use of the router function", function()
+            test_helpers.tasks_setup({
+                sources = {
+                    test = builtin_source.new_builtin_source({
+                        wait_stop_builtin = {
+                            fn = function(ctx)
+                                ctx.stop_request_receiver()
+                            end,
+                        },
+                        wait_stop_custom = {
+                            fn = function(ctx)
+                                ctx.stop_request_receiver()
+                            end,
+                            runner_name = "custom_runner",
+                        },
+                        wait_stop_custom_2 = {
+                            fn = function(ctx)
+                                ctx.stop_request_receiver()
+                            end,
+                            runner_name = "custom_runner_2",
+                        },
+                        spec_2 = {
+                            vcmd = "echo 'hello2'",
+                        },
+                    }),
+                    test2 = builtin_source.new_builtin_source({
+                        spec_2 = {
+                            vcmd = "echo 'hello3'",
+                        },
+                        spec_3 = {
+                            vcmd = "echo 'hello4'",
+                        },
+                    }),
+                },
+                runners = {
+                    custom_runner = {
+                        create_task = function(_, spec, args)
+                            return Tasks:new(spec.fn, args)
+                        end,
+                    },
+
+                    custom_runner_2 = {
+                        create_task = function(_, spec, args)
+                            return Tasks:new(spec.fn, args)
+                        end,
+                    },
+                },
+
+                router = function(name, _spec, _args, _source_name)
+                    local router_table = {
+                        wait_stop_builtin = "custom_runner",
+                        wait_stop_custom = "builtin",
+                    }
+
+                    return router_table[name]
+                end,
+            })
+
+            local task_id, task = tasks.run("wait_stop_builtin")
+            task:request_stop()
+            eq(1, task_id)
+            eq("custom_runner", task:get_runner_name())
+
+            task_id, task = tasks.run("wait_stop_custom")
+            task:request_stop()
+            eq(2, task_id)
+            eq("builtin", task:get_runner_name())
+
+            -- it still uses the default router if the custom router returns nil
+            task_id, task = tasks.run("wait_stop_custom_2")
+            task:request_stop()
+            eq(3, task_id)
+            eq("custom_runner_2", task:get_runner_name())
+        end)
     end)
 end)
