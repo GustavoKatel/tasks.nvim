@@ -175,7 +175,7 @@ describe("source tasksjson tests", function()
         pasync.util.block_on(function()
             local specs = source_tasksjson:get_specs(nil)
 
-            eq({ vim.env.SHELL, "'myscript.sh build'" }, specs["Build"].cmd)
+            eq({ vim.env.SHELL or "bash", "'myscript.sh build'" }, specs["Build"].cmd)
         end)
     end)
 
@@ -233,8 +233,8 @@ describe("source tasksjson tests", function()
 
             local rx_specs = rx()
 
-            eq({ vim.env.SHELL, "'./scripts/test.sh'" }, specs["Run tests"].cmd)
-            eq({ vim.env.SHELL, "'./scripts/test.sh'" }, rx_specs["Run tests"].cmd)
+            eq({ vim.env.SHELL or "bash", "'./scripts/test.sh'" }, specs["Run tests"].cmd)
+            eq({ vim.env.SHELL or "bash", "'./scripts/test.sh'" }, rx_specs["Run tests"].cmd)
             assert.stub(fs_mock.read_json_file).was_called_with(vim.loop.cwd() .. "/.vscode/tasks.json")
         end)
     end)
