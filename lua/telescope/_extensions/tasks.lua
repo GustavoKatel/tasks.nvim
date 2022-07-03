@@ -7,5 +7,6 @@ end
 return telescope.register_extension({
     exports = {
         specs = require("telescope._extensions.tasks.specs"),
+        running = require("telescope._extensions.tasks.running"),
     },
 })

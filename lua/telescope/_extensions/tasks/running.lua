@@ -11,10 +11,8 @@ local tasks = require("tasks")
 local generate_results_from_specs = function(opts)
     local results = {}
 
-    for source_name, source_specs in pairs(tasks.get_specs()) do
-        for spec_name, spec in pairs(source_specs) do
-            table.insert(results, { spec_name = spec_name, source_name = source_name, spec = spec })
-        end
+    for task_id, task in pairs(tasks.get_running_tasks()) do
+        table.insert(results, { task_id = task_id, task = task })
     end
 
     return results
@@ -24,11 +22,16 @@ local generate_new_finder = function(opts)
     return finders.new_table({
         results = generate_results_from_specs(opts),
         entry_maker = function(entry)
-            local line = string.format("%s [%s]", entry.spec_name, entry.source_name)
+            local line = string.format(
+                "%s [%s] [%d]",
+                entry.task:get_spec_name(),
+                entry.task:get_source_name(),
+                entry.task_id
+            )
             return {
                 value = entry,
                 display = line,
-                ordinal = line,
+                ordinal = entry.task:get_started_time(),
             }
         end,
     })
@@ -38,7 +41,7 @@ return function(opts)
     opts = opts or {}
 
     pickers.new(opts, {
-        prompt_title = "tasks: all",
+        prompt_title = "tasks: running",
         finder = generate_new_finder(opts),
         sorter = conf.generic_sorter(opts),
         attach_mappings = function(prompt_bufnr, map)
@@ -46,9 +49,9 @@ return function(opts)
                 actions.close(prompt_bufnr)
                 local selection = action_state.get_selected_entry()
 
-                local entry = selection.value
+                local task = selection.value.task
 
-                tasks.run(entry.spec_name, nil, entry.source_name)
+                task:request_stop()
             end)
             return true
         end,
