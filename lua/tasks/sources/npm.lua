@@ -1,30 +1,50 @@
 local Path = require("plenary.path")
 local fs = require("tasks.lib.fs")
+local async = require("tasks.lib.async")
 
 local M = {}
 
-function M:get_specs()
-	local path = Path:new(vim.loop.cwd()) / "package.json"
+function M:get_specs(tx)
+    local path = Path:new(vim.loop.cwd()) / "package.json"
 
-	local ok, package = pcall(fs.read_json_file, path.filename)
-	if not ok then
-		return nil
-	end
+    local ok, package = pcall(fs.read_json_file, path.filename)
+    if not ok then
+        return nil
+    end
 
-	local tasks = {}
+    local tasks = {}
 
-	local scripts = package["scripts"] or {}
+    local scripts = package["scripts"] or {}
 
-	for name, cmd in pairs(scripts) do
-		tasks[name] = {
-			cmd = cmd,
-			cwd = vim.loop.cwd(),
-		}
-	end
+    for name, cmd in pairs(scripts) do
+        tasks[name] = {
+            cmd = cmd,
+            cwd = vim.loop.cwd(),
+        }
+    end
 
-	return tasks
+    if tx ~= nil then
+        tx(tasks)
+    end
+
+    return tasks
 end
 
-function M:start_specs_listener(tx) end
+function M:start_specs_listener(tx)
+    local group_name = "TasksNvimNpmSource"
+    vim.api.nvim_create_augroup(group_name, {
+        clear = true,
+    })
+
+    vim.api.nvim_create_autocmd("BufWritePost", {
+        group = group_name,
+        pattern = { "package.json" },
+        callback = function()
+            async.run(function()
+                M:get_specs(tx)
+            end)
+        end,
+    })
+end
 
 return M

@@ -3,20 +3,13 @@ local Tasks = require("tasks.lib.task")
 local builtin_source = require("tasks.sources.builtin")
 local pasync = require("plenary.async")
 
+local test_helpers = require("tests.helpers")
+
 local eq = assert.are.same
-
-local function tasks_setup(config)
-    tasks.state.specs = {}
-    tasks.state.running_tasks = {}
-    tasks.state.task_seq_nr = 1
-    tasks.state.last_spec_ran = nil
-
-    tasks.setup(config)
-end
 
 describe("init", function()
     it("reloads task specs in setup", function()
-        tasks_setup({
+        test_helpers.tasks_setup({
             sources = {
                 test = builtin_source.new_builtin_source({
                     spec_1 = {
@@ -34,7 +27,7 @@ describe("init", function()
     end)
 
     it("starts listening to specs from sources", function()
-        tasks_setup({
+        test_helpers.tasks_setup({
             sources = {
                 test = builtin_source.new_builtin_source({
                     spec_1 = {
@@ -64,14 +57,14 @@ describe("init", function()
         assert.is.falsy(specs.custom_source.spec_2_2)
 
         pasync.util.block_on(function()
-            pasync.util.sleep(500)
+            pasync.util.sleep(600)
 
             specs = tasks.get_specs({ source_name = "custom_source" })
 
             eq("1", specs.custom_source.spec_2_1.vcmd)
             eq("2", specs.custom_source.spec_2_2.vcmd)
 
-            pasync.util.sleep(500)
+            pasync.util.sleep(600)
 
             specs = tasks.get_specs({ source_name = "custom_source" })
 
@@ -82,7 +75,7 @@ describe("init", function()
 
     describe("get_specs", function()
         it("get specs from a single source", function()
-            tasks_setup({
+            test_helpers.tasks_setup({
                 sources = {
                     test = builtin_source.new_builtin_source({
                         spec_1 = {
@@ -103,7 +96,7 @@ describe("init", function()
         end)
 
         it("get specs from a single runner", function()
-            tasks_setup({
+            test_helpers.tasks_setup({
                 sources = {
                     test = builtin_source.new_builtin_source({
                         spec_1 = {
@@ -134,7 +127,7 @@ describe("init", function()
         end)
 
         it("get specs from a single runner: multiple results", function()
-            tasks_setup({
+            test_helpers.tasks_setup({
                 sources = {
                     test = builtin_source.new_builtin_source({
                         spec_1 = {
@@ -168,7 +161,7 @@ describe("init", function()
 
     describe("get_running_tasks", function()
         before_each(function()
-            tasks_setup({
+            test_helpers.tasks_setup({
                 sources = {
                     test = builtin_source.new_builtin_source({
                         wait_stop = {
@@ -223,7 +216,7 @@ describe("init", function()
 
     describe("run", function()
         before_each(function()
-            tasks_setup({
+            test_helpers.tasks_setup({
                 sources = {
                     test = builtin_source.new_builtin_source({
                         wait_stop_builtin = {
