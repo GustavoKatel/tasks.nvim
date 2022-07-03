@@ -23,7 +23,7 @@ local generate_new_finder = function(opts)
         results = generate_results_from_specs(opts),
         entry_maker = function(entry)
             local line = string.format(
-                "%s [%s] [%d]",
+                "%s [%s] [id: %d]",
                 entry.task:get_spec_name(),
                 entry.task:get_source_name(),
                 entry.task_id

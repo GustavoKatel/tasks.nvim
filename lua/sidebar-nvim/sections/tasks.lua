@@ -34,6 +34,8 @@ local function get_running_tasks(ctx)
                 { text = task:get_spec_name(), hl = "SidebarNvimTasksNormal" },
                 { text = "  " },
                 { text = task:get_source_name(), hl = "SidebarNvimTasksSource" },
+                { text = "  " },
+                { text = task_id, hl = "SidebarNvimTasksId" },
             },
             right = {
                 { text = get_task_duration(task), hl = "SidebarNvimTasksDuration" },
@@ -67,6 +69,7 @@ return {
             SidebarNvimTasksSource = "SIdebarNvimComment",
             SidebarNvimTasksState = "SIdebarNvimLabel",
             SidebarNvimTasksDuration = "SIdebarNvimLineNr",
+            SidebarNvimTasksId = "SIdebarNvimLineNr",
         },
     },
     bindings = {
