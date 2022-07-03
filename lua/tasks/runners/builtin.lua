@@ -13,7 +13,9 @@ local function wrap_task_terminal(spec)
     return function(ctx)
         local tx, rx = pasync.control.channel.oneshot()
 
-        local cmd = "edit term://" .. (spec.cwd or vim.loop.cwd()) .. "//" .. spec.cmd
+        local cmd = table.concat(vim.tbl_flatten({ spec.cmd }), " ")
+
+        local cmd = "edit term://" .. (spec.cwd or vim.loop.cwd()) .. "//" .. cmd
 
         vim.cmd(cmd)
 

@@ -12,22 +12,22 @@ function M:get_specs(tx)
         return nil
     end
 
-    local tasks = {}
+    local specs = {}
 
     local scripts = package["scripts"] or {}
 
     for name, cmd in pairs(scripts) do
-        tasks[name] = {
+        specs[name] = {
             cmd = cmd,
             cwd = vim.loop.cwd(),
         }
     end
 
     if tx ~= nil then
-        tx(tasks)
+        tx(specs)
     end
 
-    return tasks
+    return specs
 end
 
 function M:start_specs_listener(tx)

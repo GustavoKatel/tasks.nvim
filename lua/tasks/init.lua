@@ -68,7 +68,7 @@ function M.run(name, args, source_name)
     local runner_name = spec.runner_name or source.runner_name or "builtin"
 
     if M.config.router ~= nil then
-        runner_name = M.config.router(name, spec) or runner_name
+        runner_name = M.config.router(name, spec, args, source_name) or runner_name
     end
 
     local runner = M.config.runners[runner_name]
