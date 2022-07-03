@@ -11,6 +11,3 @@ format:
 
 lint:
 	luacheck lua
-
-docgen:
-	# TODO

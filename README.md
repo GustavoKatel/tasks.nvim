@@ -2,7 +2,7 @@
 
 ## setup
 
-call `setup` is not mandatory
+Calling `setup` is not mandatory
 
 Example:
 
@@ -126,6 +126,8 @@ Shows all the available specs from all sources.
 
 The default action will create and run a new task.
 
+![telescope-demo](./demo/telescope_demo_specs.png)
+
 ```
 :Telescope tasks running
 ```
@@ -133,6 +135,8 @@ The default action will create and run a new task.
 Shows all current running tasks.
 
 The default action will request the task to stop (call `task:request_stop()`).
+
+![telescope-demo](./demo/telescope_demo_running.png)
 
 ## sidebar.nvim integration
 
@@ -147,3 +151,6 @@ sidebar.setup({
     ...
 })
 ```
+
+![sidebar-demo](./demo/sidebar_demo.png)
+

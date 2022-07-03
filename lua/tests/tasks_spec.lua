@@ -186,8 +186,8 @@ describe("init", function()
         end)
 
         it("returns nothing if no tasks are running", function()
-            local tasks = tasks.get_running_tasks()
-            eq(0, #vim.tbl_keys(tasks))
+            local tasks_running = tasks.get_running_tasks()
+            eq(0, #vim.tbl_keys(tasks_running))
         end)
 
         it("returns the correct running tasks", function()

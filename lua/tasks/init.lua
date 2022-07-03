@@ -124,8 +124,8 @@ function M.reload_specs()
 
             if source.start_specs_listener ~= nil then
                 vim.schedule(function()
-                    source:start_specs_listener(function(specs)
-                        M._spec_listener_tx.send({ source_name = source_name, specs = specs })
+                    source:start_specs_listener(function(new_specs)
+                        M._spec_listener_tx.send({ source_name = source_name, specs = new_specs })
                     end)
                 end)
             end

@@ -15,7 +15,7 @@ local function wrap_task_terminal(spec)
 
         local cmd = table.concat(vim.tbl_flatten({ spec.cmd }), " ")
 
-        local cmd = "edit term://" .. (spec.cwd or vim.loop.cwd()) .. "//" .. cmd
+        cmd = "edit term://" .. (spec.cwd or vim.loop.cwd()) .. "//" .. cmd
 
         vim.cmd(cmd)
 

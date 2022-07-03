@@ -8,7 +8,7 @@ local tasks = require("tasks")
 
 -- heavily inspired by: https://github.com/ThePrimeagen/harpoon/blob/master/lua/telescope/_extensions/marks.lua
 
-local generate_results_from_specs = function(opts)
+local generate_results_from_specs = function(_opts)
     local results = {}
 
     for task_id, task in pairs(tasks.get_running_tasks()) do
@@ -44,7 +44,7 @@ return function(opts)
         prompt_title = "tasks: running",
         finder = generate_new_finder(opts),
         sorter = conf.generic_sorter(opts),
-        attach_mappings = function(prompt_bufnr, map)
+        attach_mappings = function(prompt_bufnr, _map)
             actions.select_default:replace(function()
                 actions.close(prompt_bufnr)
                 local selection = action_state.get_selected_entry()
