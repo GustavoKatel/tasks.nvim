@@ -1,6 +1,19 @@
 # tasks.nvim
 
-## setup
+## State
+
+Alpha
+
+Currently this project depends on plenary and a fix in this PR (https://github.com/nvim-lua/plenary.nvim/pull/384)
+
+So make sure you have plenary and more specifically that fork.
+
+Neovim versions:
+
+- `0.7.2`
+- `nightly`
+
+## Configuration
 
 Calling `setup` is not mandatory
 
@@ -116,7 +129,9 @@ tasks.setup({
 })
 ```
 
-## Telescope integration
+## Integrations
+
+### Telescope
 
 ```
 :Telescope tasks specs
@@ -138,7 +153,7 @@ The default action will request the task to stop (call `task:request_stop()`).
 
 ![telescope-demo](./demo/telescope_demo_running.png)
 
-## sidebar.nvim integration
+### sidebar.nvim integration
 
 ```lua
 local tasks_section = require("sidebar-nvim.sections.tasks")
@@ -154,3 +169,18 @@ sidebar.setup({
 
 ![sidebar-demo](./demo/sidebar_demo.png)
 
+### statusline/tabline/winbar
+
+Minimal integration for lualine
+
+```lua
+lualine.setup({
+    ...
+    sections = {
+        lualine_c = {
+            require("tasks.statusline.running")("<custom_icon or prefix>")
+        }
+    }
+    ...
+})
+```
