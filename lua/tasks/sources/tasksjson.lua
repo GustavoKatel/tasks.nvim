@@ -69,12 +69,14 @@ local function json_task_to_spec(index, json_task)
     -- TODO: env
 
     if type == "shell" then
-        local shell = get_value("shell") or { executable = vim.env.SHELL }
+        local default_shell = vim.env.SHELL or "bash"
+
+        local shell = get_value("shell") or { executable = default_shell }
 
         local shell_cmd = table.concat(vim.tbl_flatten({ cmd, args }), " ")
         shell_cmd = string.format("'%s'", shell_cmd)
 
-        cmd = { shell.executable or vim.env.SHELL, shell.args, shell_cmd }
+        cmd = { shell.executable or default_shell, shell.args, shell_cmd }
     else
         cmd = { cmd, args }
     end
