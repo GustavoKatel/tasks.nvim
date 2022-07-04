@@ -16,11 +16,11 @@ function M:get_specs(tx)
 
     local scripts = package["scripts"] or {}
 
-    for name, cmd in pairs(scripts) do
+    for name, _ in pairs(scripts) do
         specs[name] = {
-            cmd = cmd,
+            cmd = { "npm", "run", name },
             cwd = vim.loop.cwd(),
-            env = { PATH = "$PATH:" .. vim.loop.cwd() .. "/node_modules/.bin" },
+            env = {},
         }
     end
 

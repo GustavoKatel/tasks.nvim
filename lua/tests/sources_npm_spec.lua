@@ -26,7 +26,7 @@ describe("source npm tests", function()
         pasync.util.block_on(function()
             local specs = source_npm:get_specs(nil)
 
-            eq("jest", specs.my_script.cmd)
+            eq({ "npm", "run", "my_script" }, specs.my_script.cmd)
         end)
     end)
 
@@ -53,8 +53,8 @@ describe("source npm tests", function()
 
             local rx_specs = rx()
 
-            eq("jest", specs.my_script.cmd)
-            eq("jest", rx_specs.my_script.cmd)
+            eq({ "npm", "run", "my_script" }, specs.my_script.cmd)
+            eq({ "npm", "run", "my_script" }, rx_specs.my_script.cmd)
             assert.stub(fs_mock.read_json_file).was_called_with(vim.loop.cwd() .. "/package.json")
         end)
     end)
