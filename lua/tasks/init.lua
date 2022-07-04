@@ -153,6 +153,15 @@ function M._start_specs_listener()
             M.state.specs[ret.source_name] = specs
         end
     end)
+
+    local group_name = "TasksNvimDirChanged"
+    vim.api.nvim_create_augroup(group_name, { clear = true })
+    vim.api.nvim_create_autocmd("DirChanged", {
+        group = group_name,
+        callback = function()
+            M.reload_specs()
+        end,
+    })
 end
 
 -- @param table opts
