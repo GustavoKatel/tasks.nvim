@@ -4,14 +4,22 @@
 
 Alpha
 
-Currently this project depends on plenary and a fix in this PR (https://github.com/nvim-lua/plenary.nvim/pull/384)
+Dependencies:
 
-So make sure you have plenary and more specifically that fork.
+- https://github.com/nvim-lua/plenary.nvim
 
 Neovim versions:
 
 - `0.7.2`
 - `nightly`
+
+## Installation
+
+With Packer:
+
+```lua
+use({ "GustavoKatel/tasks.nvim", requires = { "nvim-lua/plenary.nvim" } })
+```
 
 ## Configuration
 
