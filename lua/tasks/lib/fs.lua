@@ -1,20 +1,14 @@
 local pasync = require("plenary.async")
+local utils = require("tasks.utils")
 
 local M = {}
 
-local function assert_err(...)
-    local err, ret = ...
-    assert(not err, err)
-
-    return ret
-end
-
 function M.read_file(path)
-    local fd = assert_err(pasync.uv.fs_open(path, "r", 438))
+    local fd = utils.assert_err(pasync.uv.fs_open(path, "r", 438))
 
-    local stat = assert_err(pasync.uv.fs_fstat(fd))
+    local stat = utils.assert_err(pasync.uv.fs_fstat(fd))
 
-    local data = assert_err(pasync.uv.fs_read(fd, stat.size, 0))
+    local data = utils.assert_err(pasync.uv.fs_read(fd, stat.size, 0))
 
     local err = pasync.uv.fs_close(fd)
     assert(not err, err)

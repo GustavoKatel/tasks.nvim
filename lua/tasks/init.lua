@@ -33,6 +33,8 @@ function M.setup(config)
 
     M.config.runners.builtin = require("tasks.runners.builtin")
 
+    M._init_sources()
+
     M.reload_specs()
 end
 
@@ -112,6 +114,32 @@ function M.run_last()
     return M.run(M.state.last_spec_ran.name, M.state.last_spec_ran.args, M.state.last_spec_ran.source_name)
 end
 
+function M._init_sources()
+    local group_name = "TasksNvimSourceReloaders"
+    vim.api.nvim_create_augroup(group_name, { clear = true })
+
+    for source_name, source in pairs(M.config.sources) do
+        local reloaders = source.reloaders or {}
+
+        for _, reloader in ipairs(reloaders) do
+            local autocmd = vim.tbl_extend("force", reloader, {
+                group = group_name,
+                callback = function()
+                    pasync.run(function()
+                        if not source:verify_conditions() then
+                            return
+                        end
+                        local specs = source:get_specs()
+                        M._spec_listener_tx.send({ source_name = source_name, specs = specs })
+                    end)
+                end,
+            })
+            autocmd["event_name"] = nil
+            vim.api.nvim_create_autocmd(reloader.event_name, autocmd)
+        end
+    end
+end
+
 function M.reload_specs()
     local sources = M.config.sources
 
@@ -119,23 +147,18 @@ function M.reload_specs()
     local fns = vim.tbl_map(function(source_name)
         return function()
             local source = sources[source_name]
+            if not source:verify_conditions() then
+                return
+            end
             local specs = source:get_specs()
             M._spec_listener_tx.send({ source_name = source_name, specs = specs })
-
-            if source.start_specs_listener ~= nil then
-                vim.schedule(function()
-                    source:start_specs_listener(function(new_specs)
-                        M._spec_listener_tx.send({ source_name = source_name, specs = new_specs })
-                    end)
-                end)
-            end
         end
     end, vim.tbl_keys(sources))
 
     pasync.util.run_all(fns)
 end
 
-function M._start_specs_listener()
+local function start_specs_listener()
     pasync.run(function()
         local tx, rx = pasync.control.channel.mpsc()
 
@@ -205,6 +228,6 @@ function M.get_running_tasks(opts)
     return results
 end
 
-M._start_specs_listener()
+start_specs_listener()
 
 return M

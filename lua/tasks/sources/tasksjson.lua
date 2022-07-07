@@ -1,8 +1,5 @@
-local Path = require("plenary.path")
 local fs = require("tasks.lib.fs")
-local async = require("tasks.lib.async")
-
-local M = {}
+local Source = require("tasks.lib.source")
 
 local os_name_map = {
     ["Darwin"] = "osx",
@@ -89,43 +86,16 @@ local function json_task_to_spec(index, json_task)
 end
 
 -- TODO: parse tasks.json variables
-function M:get_specs(tx)
-    local path = Path:new(vim.loop.cwd()) / ".vscode" / "tasks.json"
+return Source:create_from_source_file({
+    filename = ".vscode/tasks.json",
+    reader = fs.read_json_file,
+    parser = function(_self, json)
+        local specs = {}
+        for i, json_task in ipairs(json.tasks or {}) do
+            local label, spec = json_task_to_spec(i, json_task)
+            specs[label] = spec
+        end
 
-    local ok, json = pcall(fs.read_json_file, path.filename)
-    if not ok then
-        return nil
-    end
-
-    local specs = {}
-
-    for i, json_task in ipairs(json.tasks or {}) do
-        local label, spec = json_task_to_spec(i, json_task)
-        specs[label] = spec
-    end
-
-    if tx ~= nil then
-        tx(specs)
-    end
-
-    return specs
-end
-
-function M:start_specs_listener(tx)
-    local group_name = "TasksNvimTasksJsonSource"
-    vim.api.nvim_create_augroup(group_name, {
-        clear = true,
-    })
-
-    vim.api.nvim_create_autocmd("BufWritePost", {
-        group = group_name,
-        pattern = { ".vscode/tasks.json" },
-        callback = function()
-            async.run(function()
-                M:get_specs(tx)
-            end)
-        end,
-    })
-end
-
-return M
+        return specs
+    end,
+})

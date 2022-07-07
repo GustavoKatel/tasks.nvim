@@ -2,6 +2,7 @@ local action_state = require("telescope.actions.state")
 local actions = require("telescope.actions")
 local finders = require("telescope.finders")
 local pickers = require("telescope.pickers")
+local previewers = require("telescope.previewers")
 local conf = require("telescope.config").values
 
 local tasks = require("tasks")
@@ -29,6 +30,10 @@ local generate_new_finder = function(opts)
                 value = entry,
                 display = line,
                 ordinal = line,
+                preview_command = function(entry, bufnr)
+                    local output = vim.split(vim.inspect(entry.value), "\n")
+                    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, output)
+                end,
             }
         end,
     })
@@ -41,6 +46,7 @@ return function(opts)
         prompt_title = "tasks: all",
         finder = generate_new_finder(opts),
         sorter = conf.generic_sorter(opts),
+        previewer = previewers.display_content.new(opts),
         attach_mappings = function(prompt_bufnr, _map)
             actions.select_default:replace(function()
                 actions.close(prompt_bufnr)
