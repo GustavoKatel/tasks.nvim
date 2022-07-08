@@ -33,7 +33,7 @@ local tasks = require("tasks")
 local source_npm = require("tasks.sources.npm")
 local source_tasksjson = require("tasks.sources.tasksjson")
 
-local builtin = require("tasks.sources.builtin")
+local Source = require("tasks.lib.source")
 
 require("telescope").load_extension("tasks")
 
@@ -41,7 +41,7 @@ tasks.setup({
 	sources = {
 		npm = source_npm,
 		vscode = source_tasksjson,
-		utils = builtin.new_builtin_source({
+		utils = Source:create({ specs = {
 			sleep = {
 				fn = function(ctx)
 					local pasync = require("plenary.async")
@@ -57,7 +57,7 @@ tasks.setup({
             shell_cmd = {
                 cmd = "make test"
             }
-		}),
+		}}),
 	},
 })
 
@@ -65,19 +65,41 @@ tasks.setup({
 
 ## Sources
 
-### builtin
-
-the builtin source is just a place holder to allow you to define custom task specs using lua functions, vim commands or shell commands.
-
 ### npm
 
 It will load all `package.json` scripts from the project root to be used as task specs.
+
+Example:
+
+```lua
+local source_npm = require("tasks.sources.npm")
+
+tasks.setup({
+  sources = {
+    ["js/ts (yarn)"] = source_npm:with({ script_runner = { "yarn" } })
+    -- this one will still use npm
+    ["js/ts (npm)"] = source_npm
+    -- using a different package.json path
+    ["subpackage (npm)"] = source_npm:with({ filename = "frontend/app/package.json" })
+  }
+})
+```
 
 ### tasksjson (vscode)
 
 It will load all tasks from `.vscode/tasks.json` to be used as task specs.
 
 There are bunch of things missing from the schema, I believe it's enough to get started. Please open an issue if you think any of the missing features should be added.
+
+### cargo
+
+It will provide three specs when it finds a `Cargo.toml` in the root directory.
+
+Specs:
+
+- cargo run
+- cargo watch
+- cargo test
 
 ## Runners
 
@@ -106,7 +128,7 @@ tasks.setup({
     },
 
     sources = {
-        my_tasks = builtin.new_builtin_source({
+        my_tasks = Source:create({ specs = {
 			sleep = {
 				fn = function(ctx)
 					local pasync = require("plenary.async")
@@ -116,7 +138,7 @@ tasks.setup({
                 -- this prop will route this task to the custom runner
                 runner_name = "custom_runner"
 			},
-		}),
+		}}),
     }
 })
 ```
@@ -273,3 +295,8 @@ Signal the underlying job that this task should be cancelled.
 ### task:get_started_time()
 
 ### task:get_finished_time()
+
+
+## Credits
+
+Thanks to [yngwi](https://github.com/yngwi) for help testing and providing feedback and ideas in [the Reddit post](https://www.reddit.com/r/neovim/comments/vqsoyo/tasksnvim_yet_another_task_runnermanager_for/)

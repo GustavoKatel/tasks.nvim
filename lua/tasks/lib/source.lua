@@ -32,8 +32,6 @@ function Source:create_from_source_file(opts)
         with = Source.create_from_source_file,
     }))
 
-    --print(vim.inspect(obj))
-
     return obj
 end
 

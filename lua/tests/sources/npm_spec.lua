@@ -1,11 +1,14 @@
+local pasync = require("tasks.lib.async")
 local source_npm = require("tasks.sources.npm")
 
 local eq = assert.are.same
 
 describe("npm tests", function()
     it("parses from package.json", function()
-        local specs = source_npm:parser({ scripts = { my_script = "jest" } })
-        eq({ "npm", "run", "my_script" }, specs.my_script.cmd)
+        pasync.util.block_on(function()
+            local specs = source_npm:parser({ scripts = { my_script = "jest" } })
+            eq({ "npm", "run", "my_script" }, specs.my_script.cmd)
+        end)
     end)
 
     it("allows option overrides", function()
