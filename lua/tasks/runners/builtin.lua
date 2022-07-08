@@ -1,7 +1,6 @@
 local pasync = require("tasks.lib.async")
 local Task = require("tasks.lib.task")
-
-local runner = {}
+local Runner = require("tasks.lib.runner")
 
 local function wrap_task_fn(fn)
     return function(_, args)
@@ -9,7 +8,7 @@ local function wrap_task_fn(fn)
     end
 end
 
-local function wrap_task_terminal(spec)
+local function wrap_task_terminal(self, spec)
     return function(ctx)
         local tx, rx = pasync.control.channel.oneshot()
 
@@ -29,6 +28,20 @@ local function wrap_task_terminal(spec)
         local cmd = table.concat(vim.tbl_flatten({ env_concat, spec.cmd }), " ")
 
         cmd = "edit term://" .. (spec.cwd or vim.loop.cwd()) .. "//" .. cmd
+
+        local current_window_nr = vim.api.nvim_win_get_number(vim.api.nvim_get_current_win())
+        if self.sticky_terminal_window then
+            if
+                self.sticky_termininal_window_number ~= nil
+                and self.sticky_termininal_window_number ~= current_window_nr
+            then
+                vim.cmd(self.sticky_termininal_window_number .. "wincmd w")
+            end
+
+            if self.sticky_termininal_window_number == nil then
+                self.sticky_termininal_window_number = current_window_nr
+            end
+        end
 
         vim.cmd(cmd)
 
@@ -52,11 +65,23 @@ local function wrap_task_terminal(spec)
             end,
         })
 
+        if self.sticky_terminal_window then
+            if current_window_nr ~= self.sticky_termininal_window_number then
+                vim.cmd("wincmd p")
+            end
+        end
+
         rx()
     end
 end
 
-function runner:create_task(spec, args)
+local builtin = Runner:create({
+    sticky_terminal_window = false,
+
+    sticky_termininal_window_number = nil,
+})
+
+function builtin:create_task(spec, args)
     local task
 
     if spec.fn ~= nil then
@@ -69,10 +94,10 @@ function runner:create_task(spec, args)
         end
         task = Task:new(wrap_task_fn(vim.cmd), { args })
     elseif spec.cmd ~= nil then
-        task = Task:new(wrap_task_terminal(spec), nil)
+        task = Task:new(wrap_task_terminal(self, spec), nil)
     end
 
     return task
 end
 
-return runner
+return builtin
