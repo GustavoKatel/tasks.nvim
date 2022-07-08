@@ -1,4 +1,4 @@
-local pasync = require("plenary.async")
+local pasync = require("tasks.lib.async")
 local Task = require("tasks.lib.task")
 
 local runner = {}
@@ -34,6 +34,9 @@ local function wrap_task_terminal(spec)
 
         local buffer = vim.api.nvim_get_current_buf()
         local term_id = vim.b.terminal_job_id
+
+        ctx.metadata.buffer = buffer
+        ctx.metadata.term_id = term_id
 
         pasync.run(function()
             ctx.stop_request_receiver()

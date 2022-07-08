@@ -31,7 +31,9 @@ M._spec_listener_tx = nil
 function M.setup(config)
     M.config = vim.tbl_extend("force", M.config, config or {})
 
-    M.config.runners.builtin = require("tasks.runners.builtin")
+    if M.config.runners.builtin == nil then
+        M.config.runners.builtin = require("tasks.runners.builtin")
+    end
 
     M._init_sources()
 
