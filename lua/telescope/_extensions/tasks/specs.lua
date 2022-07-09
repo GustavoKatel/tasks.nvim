@@ -7,6 +7,7 @@ local conf = require("telescope.config").values
 local tasks = require("tasks")
 
 local tasks_actions = require("telescope._extensions.tasks.actions")
+local tasks_telescope_config = require("telescope._extensions.tasks.config")
 
 -- heavily inspired by: https://github.com/ThePrimeagen/harpoon/blob/master/lua/telescope/_extensions/marks.lua
 
@@ -49,8 +50,10 @@ return function(opts)
             finder = generate_new_finder(opts),
             sorter = conf.generic_sorter(opts),
             previewer = previewers.display_content.new(opts),
-            attach_mappings = function()
+            attach_mappings = function(prompt_bufnr, map)
                 actions.select_default:replace(tasks_actions.run)
+
+                tasks_telescope_config.attach_mappings("specs", prompt_bufnr, map)
                 return true
             end,
         })

@@ -34,4 +34,20 @@ function M.request_stop(prompt_bufnr)
     task:request_stop()
 end
 
+function M.open_buffer(opts)
+    opts = vim.tbl_extend("force", { cmd = "buffer" }, opts or {})
+
+    return function(prompt_bufnr)
+        actions.close(prompt_bufnr)
+        local selection = action_state.get_selected_entry()
+
+        local task = selection.value.task
+
+        assert(task.metadata.buffer ~= nil, "task doesn't have a buffer attached")
+
+        local cmd = table.concat(vim.tbl_flatten({ opts.cmd, task.metadata.buffer }), " ")
+        vim.cmd(cmd)
+    end
+end
+
 return M

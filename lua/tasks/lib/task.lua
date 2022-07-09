@@ -24,8 +24,6 @@ function Task:new(async_fn, args)
     t.stop_tx = stop_tx
     t.stop_rx = stop_rx
 
-    t.ctx = create_task_context(t)
-
     setmetatable(t, self)
     self.__index = self
     return t
@@ -62,6 +60,8 @@ end
 function Task:run()
     self.state = "running"
     self.started_time = vim.loop.hrtime()
+
+    self.ctx = create_task_context(self)
 
     pasync.run(function()
         self.fn(self.ctx, self.args)
