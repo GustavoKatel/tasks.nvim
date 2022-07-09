@@ -1,10 +1,17 @@
 local pasync = require("tasks.lib.async")
 local Task = require("tasks.lib.task")
 local Runner = require("tasks.lib.runner")
+local utils = require("tasks.utils")
+
+local function replace_variables(list, spec)
+    return vim.tbl_map(function(item)
+        return utils.replace_variables(item, spec.inputs)
+    end, vim.tbl_flatten({ list }))
+end
 
 local function wrap_task_fn(fn)
     return function(_, args)
-        fn(unpack(args or {}))
+        fn(unpack(replace_variables(args or {})))
     end
 end
 
@@ -13,6 +20,8 @@ local function wrap_task_terminal(self, spec, runner_opts)
 
     return function(ctx, args)
         local tx, rx = pasync.control.channel.oneshot()
+
+        args = replace_variables(args, spec)
 
         local env = spec.env or {}
 
@@ -27,7 +36,7 @@ local function wrap_task_terminal(self, spec, runner_opts)
             env_concat = env_concat .. " "
         end
 
-        local cmd = table.concat(vim.tbl_flatten({ env_concat, spec.cmd, args }), " ")
+        local cmd = table.concat(replace_variables({ env_concat, spec.cmd, args }, spec), " ")
 
         local edit_cmd = runner_opts.terminal_edit_command or self.terminal_edit_command or "edit"
 
@@ -93,6 +102,8 @@ function builtin:create_task(spec, args, runner_opts)
     if spec.fn ~= nil then
         task = Task:new(spec.fn, args)
     elseif spec.vim_cmd ~= nil then
+        spec.vim_cmd = table.concat(spec.vim_cmd, " ")
+
         if args ~= nil then
             args = spec.vim_cmd .. " " .. args
         else

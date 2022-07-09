@@ -144,4 +144,24 @@ describe("tasksjson tests", function()
 
         eq({ "bash", "-c", "'ls -lah'" }, specs["Build"].cmd)
     end)
+
+    it("attaches inputs to the specs", function()
+        local specs = source_tasksjson:parser({
+            inputs = { { id = "file", description = "enter file name" } },
+            tasks = {
+                {
+                    group = "build",
+                    type = "shell",
+                    command = "ls",
+                    args = { "-lah" },
+                    shell = {
+                        executable = "bash",
+                        args = { "-c" },
+                    },
+                },
+            },
+        })
+
+        eq({ { id = "file", description = "enter file name" } }, specs["Build"].inputs)
+    end)
 end)

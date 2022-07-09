@@ -19,7 +19,8 @@ end
 function M.read_json_file(path)
     local data = M.read_file(path)
 
-    local obj = vim.json.decode(data)
+    local ok, obj = pcall(vim.json.decode, data)
+    assert(ok, "error trying to parse json")
 
     return obj
 end

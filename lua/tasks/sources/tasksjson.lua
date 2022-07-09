@@ -63,7 +63,6 @@ local function json_task_to_spec(index, json_task)
     end
 
     -- TODO: task dependencies
-    -- TODO: env
 
     if type == "shell" then
         local default_shell = vim.env.SHELL or "bash"
@@ -78,14 +77,15 @@ local function json_task_to_spec(index, json_task)
         cmd = { cmd, args }
     end
 
+    cmd = vim.tbl_flatten({ cmd })
+
     return label, {
-        cmd = vim.tbl_flatten(cmd),
+        cmd = cmd,
         cwd = cwd,
         original = json_task,
     }
 end
 
--- TODO: parse tasks.json variables
 return Source:create_from_source_file({
     filename = ".vscode/tasks.json",
     reader = fs.read_json_file,
@@ -93,6 +93,7 @@ return Source:create_from_source_file({
         local specs = {}
         for i, json_task in ipairs(json.tasks or {}) do
             local label, spec = json_task_to_spec(i, json_task)
+            spec.inputs = json.inputs
             specs[label] = spec
         end
 
