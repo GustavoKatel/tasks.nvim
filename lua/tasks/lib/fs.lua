@@ -1,4 +1,4 @@
-local pasync = require("plenary.async")
+local pasync = require("tasks.lib.async")
 local utils = require("tasks.utils")
 
 local M = {}
