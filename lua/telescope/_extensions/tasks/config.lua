@@ -7,7 +7,6 @@ local _Default = {
         running = {
             i = {
                 ["<c-c>"] = tasks_actions.request_stop,
-                ["<c-b>"] = tasks_actions.open_buffer(),
             },
         },
 

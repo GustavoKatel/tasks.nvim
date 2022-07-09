@@ -43,7 +43,7 @@ tasks.setup({
 		vscode = source_tasksjson,
 		utils = Source:create({ specs = {
 			sleep = {
-				fn = function(ctx)
+				fn = function(ctx, args)
 					local pasync = require("plenary.async")
 
 					pasync.util.sleep(10000)
@@ -109,22 +109,43 @@ The builtin runner is a generic runner that allows you to run lua functions, vim
 
 It's always available, even if you don't specify in your config.
 
+You can override the builtin runner like so:
+
+```lua
+tasks.setup({
+    ...
+	runners = {
+        -- use a completely different runner:
+        builtin = my_custom_runner
+        -- or override the builtin settings with
+		builtin = runner_builtin:with({ terminal_edit_command = "split" }),
+	},
+})
+```
+
 ### Custom runners
 
 A very minimal custom runner that runs lua functions (async functions) can be created as such:
 
 ```lua
 local Task = require("tasks.lib.task")
+local Runner = require("tasks.lib.runner")
 local tasks = require("tasks")
 
 tasks.setup({
     ...
     runners = {
-        custom_runner = {
+        custom_runner = Runner:create({
             create_task = function(self, spec, args)
-                return Task:new(spec.fn, args)
+                local fn = function(ctx, args)
+                    print("running from custom runner")
+                    local ret = spec.fn(args)
+                    print("custom runner done!")
+                    return ret
+                end
+                return Task:new(fn, args)
             end
-        }
+        })
     },
 
     sources = {
@@ -185,6 +206,40 @@ The default action will request the task to stop (call `task:request_stop()`).
 
 ![telescope-demo](./demo/telescope_demo_running.png)
 
+#### Default keybindings
+
+The extension provides some default keybindings which you can override like so:
+
+> *Note*
+> this is just to illustrate, don't use as is
+
+```lua
+local tasks_actions = require("telescope._extensions.tasks.actions")
+
+require("telescope").setup({
+    extensions = {
+		tasks = {
+            mappings = {
+                -- mappings for the "running tasks" picker
+                running = {
+                    i = {
+                        <select_default> = tasks_actions.open_buffer({ cmd = { "buffer" } }),
+                        ["<c-c>"] = tasks_actions.request_stop,
+                    },
+                },
+
+                specs = {
+                    i = {
+                        <select_default> = tasks_actions.run,
+                        ["<c-t>"] = tasks_actions.run_with_runner_opts({ terminal_edit_command = "vsplit" }),
+                    },
+                },
+            },
+        }
+    }
+})
+```
+
 ### sidebar.nvim integration
 
 ```lua
@@ -219,13 +274,15 @@ lualine.setup({
 
 ## API
 
-### tasks.run(spec_name, args, source_name)
+### tasks.run(spec_name, args, source_name, runner_opts)
 
 Run the first spec with name `spec_name` additionally passing extra args in `args`
 
 You can also pass `source_name` to refine the search and only run specs from that source.
 
-Returns `task_id` and a task table ([Task](#task-api))
+You can also pass `runner_opts` that will be consumed by the runner.
+
+Returns `task_id` and a task table ([Task](./doc/task.md))
 
 ### tasks.run_last()
 
@@ -274,28 +331,10 @@ Example of return value:
 }
 ```
 
-### task api
+## More docs
 
-A task object has a few helper methods.
-
-### task:get_spec_name()
-
-### task:get_source_name()
-
-### task:get_runner_name()
-
-### task:get_state()
-
-Returns the current task state, which can evolve from `ready` -> `running` -> `done`.
-
-### task:request_stop()
-
-Signal the underlying job that this task should be cancelled.
-
-### task:get_started_time()
-
-### task:get_finished_time()
-
+- Task api - [task.md](./doc/task.md)
+- Source api - [source.md](./doc/source.md)
 
 ## Credits
 
