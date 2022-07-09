@@ -14,7 +14,7 @@ function Runner:with(opts_overrides)
     return self:create(opts_overrides)
 end
 
-function Runner:create_task(spec, args)
+function Runner:create_task(_spec, _args)
     assert(false, "not implemented")
 end
 

@@ -30,8 +30,8 @@ local generate_new_finder = function(opts)
                 value = entry,
                 display = line,
                 ordinal = line,
-                preview_command = function(entry, bufnr)
-                    local output = vim.split(vim.inspect(entry.value), "\n")
+                preview_command = function(entry_preview, bufnr)
+                    local output = vim.split(vim.inspect(entry_preview.value), "\n")
                     vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, output)
                 end,
             }
