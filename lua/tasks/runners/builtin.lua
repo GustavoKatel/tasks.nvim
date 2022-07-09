@@ -8,8 +8,10 @@ local function wrap_task_fn(fn)
     end
 end
 
-local function wrap_task_terminal(self, spec)
-    return function(ctx)
+local function wrap_task_terminal(self, spec, runner_opts)
+    runner_opts = runner_opts or {}
+
+    return function(ctx, args)
         local tx, rx = pasync.control.channel.oneshot()
 
         local env = spec.env or {}
@@ -25,9 +27,11 @@ local function wrap_task_terminal(self, spec)
             env_concat = env_concat .. " "
         end
 
-        local cmd = table.concat(vim.tbl_flatten({ env_concat, spec.cmd }), " ")
+        local cmd = table.concat(vim.tbl_flatten({ env_concat, spec.cmd, args }), " ")
 
-        cmd = "edit term://" .. (spec.cwd or vim.loop.cwd()) .. "//" .. cmd
+        local edit_cmd = runner_opts.terminal_edit_command or self.terminal_edit_command or "edit"
+
+        cmd = edit_cmd .. " term://" .. (spec.cwd or vim.loop.cwd()) .. "//" .. cmd
 
         local current_window_nr = vim.api.nvim_win_get_number(vim.api.nvim_get_current_win())
         if self.sticky_terminal_window then
@@ -79,9 +83,11 @@ local builtin = Runner:create({
     sticky_terminal_window = false,
 
     sticky_termininal_window_number = nil,
+
+    terminal_edit_command = "edit",
 })
 
-function builtin:create_task(spec, args)
+function builtin:create_task(spec, args, runner_opts)
     local task
 
     if spec.fn ~= nil then
@@ -94,7 +100,7 @@ function builtin:create_task(spec, args)
         end
         task = Task:new(wrap_task_fn(vim.cmd), { args })
     elseif spec.cmd ~= nil then
-        task = Task:new(wrap_task_terminal(self, spec), nil)
+        task = Task:new(wrap_task_terminal(self, spec, runner_opts), args)
     end
 
     return task

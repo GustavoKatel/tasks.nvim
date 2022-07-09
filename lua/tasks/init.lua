@@ -46,7 +46,7 @@ function M._get_task_id()
     return id
 end
 
-function M.run(name, args, source_name)
+function M.run(name, args, source_name, runner_opts)
     local spec
     local source
 
@@ -82,7 +82,7 @@ function M.run(name, args, source_name)
         return
     end
 
-    local task = runner:create_task(spec, args)
+    local task = runner:create_task(spec, args, runner_opts)
     local task_id = M._get_task_id()
 
     task:set_metadata({
