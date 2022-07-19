@@ -1,5 +1,6 @@
 local pasync = require("tasks.lib.async")
 local utils = require("tasks.utils")
+local jsonc = require("tasks.jsonc")
 
 local M = {}
 
@@ -20,7 +21,12 @@ function M.read_json_file(path)
     local data = M.read_file(path)
 
     local ok, obj = pcall(vim.json.decode, data)
-    assert(ok, "error trying to parse json")
+    if ok then
+        return obj
+    end
+
+    ok, obj = pcall(jsonc.decode_async, data)
+    assert(ok, "could not parse jsonc file. Make sure you have 'jsonc' grammar in treesitter")
 
     return obj
 end
