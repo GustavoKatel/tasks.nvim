@@ -19,7 +19,10 @@ function Source:create_from_source_file(opts)
     local obj = self:create(vim.tbl_extend("force", opts, {
         reloaders = { reloaders.file_changed(opts.filename), unpack(opts.reloaders or {}) },
         get_specs = function(s)
-            local data = s.reader(s.filename)
+            local ok, data = pcall(s.reader, s.filename)
+            if not ok then
+                return {}
+            end
 
             local specs = s:parser(data)
 
