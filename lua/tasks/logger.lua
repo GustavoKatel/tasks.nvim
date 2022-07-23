@@ -2,6 +2,8 @@
 
 local Path = require("plenary.path")
 
+local async_vim_notify = vim.schedule_wrap(vim.notify)
+
 local default_notify_opts = {
     title = "tasks",
 }
@@ -9,7 +11,7 @@ local default_notify_opts = {
 local log = {
     level = "warn",
 
-    notify_format = "[tasks] %s",
+    notify_format = "[tasks] %s %s",
 }
 
 function log:setup(opts)
@@ -36,6 +38,9 @@ end
 function log:add_entry(msg, props, level)
     if not self.__notify_fmt then
         self.__notify_fmt = function(m, p)
+            if type(m) == "table" then
+                m = vim.inspect(m)
+            end
             return string.format(self.notify_format, m, format_props(p))
         end
     end
@@ -102,7 +107,7 @@ end
 ---@param props table key-value props to attach to the message
 function log:warn(msg, props)
     self:add_entry(msg, props, "warn")
-    vim.notify(self.__notify_fmt(msg, props), vim.log.levels.WARN, default_notify_opts)
+    async_vim_notify(self.__notify_fmt(msg, props), vim.log.levels.WARN, default_notify_opts)
 end
 
 ---Add a log entry at ERROR level
@@ -110,7 +115,7 @@ end
 ---@param props table key-value props to attach to the message
 function log:error(msg, props)
     self:add_entry(msg, props, "error")
-    vim.notify(self.__notify_fmt(msg, props), vim.log.levels.ERROR, default_notify_opts)
+    async_vim_notify(self.__notify_fmt(msg, props), vim.log.levels.ERROR, default_notify_opts)
 end
 
 setmetatable({}, log)

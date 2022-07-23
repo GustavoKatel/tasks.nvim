@@ -3,13 +3,6 @@ local pasync = require("tasks.lib.async")
 
 local M = {}
 
-function M.assert_err(...)
-    local err, ret = ...
-    assert(not err, err)
-
-    return ret
-end
-
 -- inpired by https://gitlab.com/jrop/dotfiles/-/blob/master/.config/nvim/lua/my/utils.lua#L13
 -- and https://www.reddit.com/r/neovim/comments/vu9atg/how_do_i_get_the_text_selected_in_visual_mode/
 function M.get_selected_text()

@@ -1,5 +1,6 @@
 local fs = require("tasks.lib.fs")
 local reloaders = require("tasks.lib.reloaders")
+local conditions = require("tasks.lib.conditions")
 
 local Source = { conditions = {}, reloaders = {}, specs = {} }
 
@@ -17,6 +18,9 @@ function Source:create_from_source_file(opts)
     opts = opts or { filename = nil, reader = fs.read_file, parser = nil }
 
     local obj = self:create(vim.tbl_extend("force", opts, {
+        conditions = {
+            conditions.file_exists("Cargo.toml"),
+        },
         reloaders = { reloaders.file_changed(opts.filename), unpack(opts.reloaders or {}) },
         get_specs = function(s)
             local ok, data = pcall(s.reader, s.filename)
