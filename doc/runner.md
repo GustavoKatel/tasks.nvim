@@ -33,6 +33,8 @@ function custom_runner:create_task(spec, args, runner_opts)
 end
 ```
 
+Please refer to `replace_variables` in [utils](./utils.md) to see how to integrate variable substitution to your runner.
+
 ## Runner:create()
 
 Create a new runner with default options

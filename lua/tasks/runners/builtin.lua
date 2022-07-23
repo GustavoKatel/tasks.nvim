@@ -102,7 +102,9 @@ function builtin:create_task(spec, args, runner_opts)
     if spec.fn ~= nil then
         task = Task:new(spec.fn, args)
     elseif spec.vim_cmd ~= nil then
-        spec.vim_cmd = table.concat(spec.vim_cmd, " ")
+        if type(spec.vim_cmd) == "table" then
+            spec.vim_cmd = table.concat(spec.vim_cmd, " ")
+        end
 
         if args ~= nil then
             args = spec.vim_cmd .. " " .. args

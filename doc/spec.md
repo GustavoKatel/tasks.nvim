@@ -24,3 +24,9 @@ local spec = {
     ...
 }
 ```
+
+## Variables and Inputs
+
+You are free to use variables and inputs in the specs definitions. Runners should be able to handle them using the helper `utils.replace_variables`.
+
+Variables and Inputs specification follow the `tasks.json` specification here: https://code.visualstudio.com/docs/editor/variables-reference

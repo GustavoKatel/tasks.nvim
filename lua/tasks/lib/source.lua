@@ -20,9 +20,7 @@ function Source:create_from_source_file(opts)
         reloaders = { reloaders.file_changed(opts.filename), unpack(opts.reloaders or {}) },
         get_specs = function(s)
             local ok, data = pcall(s.reader, s.filename)
-            if not ok then
-                return {}
-            end
+            assert(ok, { message = "failed to read/parse file: " .. s.filename, internal = data })
 
             local specs = s:parser(data)
 

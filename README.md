@@ -7,6 +7,7 @@ Alpha
 Dependencies:
 
 - https://github.com/nvim-lua/plenary.nvim
+- `jsonc` treesitter parser (optional - only needed if you're using the `tasks.json` source)
 
 Neovim versions:
 
@@ -334,7 +335,10 @@ Example of return value:
 ## More docs
 
 - Task api - [task.md](./doc/task.md)
+- Spec api - [task.md](./doc/spec.md)
 - Source api - [source.md](./doc/source.md)
+- Builtin runner - [runner_builtin.md](./doc/runner_builtin.md)
+- [docs folder](./doc)
 
 ## Credits
 
