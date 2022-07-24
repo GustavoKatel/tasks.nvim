@@ -92,6 +92,12 @@ It will load all tasks from `.vscode/tasks.json` to be used as task specs.
 
 There are bunch of things missing from the schema, I believe it's enough to get started. Please open an issue if you think any of the missing features should be added.
 
+### dap
+
+It will load all configurations from `dap.configurations` and also configurations from `launch.json` (See: https://code.visualstudio.com/docs/editor/debugging)
+
+It works well when combined with `tasksjson` when using attributes like `preLaunchTask` and `postDebugTask`.
+
 ### cargo
 
 It will provide three specs when it finds a `Cargo.toml` in the root directory.

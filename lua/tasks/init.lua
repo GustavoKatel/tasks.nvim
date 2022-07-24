@@ -1,5 +1,7 @@
 local pasync = require("plenary.async")
 local logger = require("tasks.logger")
+local TaskGroup = require("tasks.lib.task_group")
+local Error = require("tasks.lib.error")
 
 local M = {}
 
@@ -25,10 +27,8 @@ M.state = {
     -- Array<TaskSpec>
     specs = {},
 
-    -- Array<Task>
-    running_tasks = {},
-
-    task_seq_nr = 1,
+    -- Array<TaskGroup>
+    running_task_groups = {},
 
     -- { name = <string>, source_name = <string> }
     last_spec_ran = nil,
@@ -51,13 +51,7 @@ function M.setup(config)
     M.reload_specs()
 end
 
-function M._get_task_id()
-    local id = M.state.task_seq_nr
-    M.state.task_seq_nr = M.state.task_seq_nr + 1
-    return id
-end
-
-function M.run(name, args, source_name, runner_opts)
+function M.create_task(name, args, source_name, runner_opts)
     logger:debug("creating task from spec name", { name = name, source_name = source_name })
     local spec
     local source
@@ -76,10 +70,7 @@ function M.run(name, args, source_name, runner_opts)
         spec = (M.state.specs[source_name] or {})[name]
     end
 
-    if spec == nil then
-        logger:warn("task spec not found", { name = name, source_name = source_name })
-        return
-    end
+    assert(spec ~= nil, Error:new("task spec not found", { name = name, source_name = source_name }))
 
     local runner_name = spec.runner_name or source.runner_name or "builtin"
 
@@ -89,35 +80,74 @@ function M.run(name, args, source_name, runner_opts)
 
     local runner = M.config.runners[runner_name]
 
-    if runner == nil then
-        logger:warn("runner not found", { runner_name = runner_name })
-        return
-    end
+    assert(runner ~= nil, Error:new("runner not found", { runner_name = runner_name }))
 
     local task = runner:create_task(spec, args, runner_opts)
-    local task_id = M._get_task_id()
 
     task:set_metadata({
         spec = spec,
         spec_name = name,
         source_name = source_name,
         runner_name = runner_name,
-        task_id = task_id,
     })
+    return task, spec
+end
 
-    M.state.running_tasks[task_id] = task
+function M.get_task_dependencies(task)
+    local dependencies = task:get_spec().dependencies or {}
+
+    local ret = {}
+
+    for _, dep in ipairs(dependencies) do
+        local dep_task, _ = M.create_task(dep.spec_name, dep.args, dep.source_name, dep.runner_opts)
+        -- recursive search for task dependencies
+        for _, sub_dep in ipairs(M.get_task_dependencies(dep_task)) do
+            table.insert(ret, sub_dep)
+        end
+    end
+
+    table.insert(ret, task)
+
+    return ret
+end
+
+function M.run(name, args, source_name, runner_opts)
+    local ok, task = pcall(M.create_task, name, args, source_name, runner_opts)
+    if not ok then
+        -- task here is an Error
+        logger:error(task)
+        return
+    end
+
+    local ok, deps = pcall(M.get_task_dependencies, task)
+    if not ok then
+        -- deps here is an Error
+        logger:error(deps)
+        return
+    end
+
+    local task_group = TaskGroup:new(deps)
+
+    M.state.running_task_groups[task_group:get_id()] = task_group
 
     task:on_finish(function()
-        M.state.running_tasks[task_id] = nil
+        M.state.running_task_groups[task_group:get_id()] = nil
     end)
 
-    logger:info(string.format("starting task '%s' with id:'%d'", name, task_id), { name = name, task_id = task_id })
+    logger:info(string.format("starting task '%s' with id:'%d'", name, task:get_id()), {
+        name = name,
+        task_id = task:get_id(),
+        dependency_count = task_group:get_state().total,
+        task_group_id = task_group:get_id(),
+    })
 
-    task:run()
+    pasync.run(function()
+        task_group:run()
+    end)
 
-    M.state.last_spec_ran = { name = name, args = args, source_name = source_name }
+    M.state.last_spec_ran = { name = name, args = args, source_name = task:get_source_name() }
 
-    return task_id, task
+    return task:get_id(), task, task_group
 end
 
 function M.run_last()
@@ -139,6 +169,8 @@ local function pull_specs_from_source(source_name, source, logger_props)
         logger:error(specs, vim.tbl_deep_extend("force", { source_name = source_name }, logger_props or {}))
         return
     end
+
+    specs = specs or {}
 
     M._spec_listener_tx.send({ source_name = source_name, specs = specs })
     logger:debug("source get_specs done", { source_name = source_name, spec_count = #specs })
@@ -248,12 +280,14 @@ function M.get_running_tasks(opts)
 
     local results = {}
 
-    for task_id, task in pairs(M.state.running_tasks) do
-        local source_match = opts.source_name == nil or opts.source_name == task:get_source_name()
-        local runner_match = opts.runner_name == nil or opts.runner_name == task:get_runner_name()
+    for _, task_group in pairs(M.state.running_task_groups) do
+        for task_id, task in pairs(task_group.running) do
+            local source_match = opts.source_name == nil or opts.source_name == task:get_source_name()
+            local runner_match = opts.runner_name == nil or opts.runner_name == task:get_runner_name()
 
-        if source_match and runner_match then
-            results[task_id] = task
+            if source_match and runner_match then
+                results[task_id] = task
+            end
         end
     end
 

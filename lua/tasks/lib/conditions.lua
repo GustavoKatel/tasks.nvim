@@ -8,4 +8,11 @@ function M.file_exists(filename)
     end
 end
 
+function M.has_module(module_name)
+    return function()
+        local ok, _ = pcall(require, module_name)
+        return ok
+    end
+end
+
 return M

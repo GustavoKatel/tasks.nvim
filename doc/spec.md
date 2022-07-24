@@ -20,6 +20,9 @@ local spec = {
     -- extra environment variables passed to terminal commands (cmd)
     env = { ["PYTHON_PATH"] = "venv" },
 
+    -- defines a list of dependencies for this spec, once all the specs defined in this list are finished, this spec will start.
+    dependencies = { { spec_name = "build", args = {}, source_name = nil, dep.runner_opts = {} } },
+
     -- other attributes can be added, but they are not expected to be present
     ...
 }

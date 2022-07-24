@@ -9,9 +9,9 @@ local function replace_variables(list, spec)
     end, vim.tbl_flatten({ list }))
 end
 
-local function wrap_task_fn(fn)
+local function wrap_task_fn(fn, spec)
     return function(_, args)
-        fn(unpack(replace_variables(args or {})))
+        fn(unpack(replace_variables(args or {}, spec)))
     end
 end
 
@@ -111,9 +111,11 @@ function builtin:create_task(spec, args, runner_opts)
         else
             args = spec.vim_cmd
         end
-        task = Task:new(wrap_task_fn(vim.cmd), { args })
+        task = Task:new(wrap_task_fn(vim.cmd, spec), { args })
     elseif spec.cmd ~= nil then
         task = Task:new(wrap_task_terminal(self, spec, runner_opts), args)
+    else
+        error("invalid task spec")
     end
 
     return task

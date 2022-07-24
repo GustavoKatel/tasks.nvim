@@ -7,6 +7,7 @@ local reloaders = require("tasks.lib.reloaders")
 local test_helpers = require("tests.helpers")
 
 local eq = assert.are.same
+local neq = assert.are_not.same
 
 describe("init", function()
     it("reloads task specs in setup", function()
@@ -15,7 +16,7 @@ describe("init", function()
                 test = Source:create({
                     specs = {
                         spec_1 = {
-                            vcmd = "echo 'hello'",
+                            vim_cmd = "echo 'hello'",
                         },
                     },
                 }),
@@ -26,7 +27,7 @@ describe("init", function()
         assert.is.truthy(tasks._spec_listener_tx)
 
         local specs = tasks.get_specs()
-        eq("echo 'hello'", specs.test.spec_1.vcmd)
+        eq("echo 'hello'", specs.test.spec_1.vim_cmd)
     end)
 
     it("creates reloaders from sources", function()
@@ -37,7 +38,7 @@ describe("init", function()
                 test = Source:create({
                     specs = {
                         spec_1 = {
-                            vcmd = "echo 'hello'",
+                            vim_cmd = "echo 'hello'",
                         },
                     },
                 }),
@@ -47,7 +48,7 @@ describe("init", function()
                         if reloaded then
                             return {
                                 spec_2 = {
-                                    vcmd = "echo 'test'",
+                                    vim_cmd = "echo 'test'",
                                 },
                             }
                         end
@@ -80,7 +81,7 @@ describe("init", function()
 
             specs = tasks.get_specs({ source_name = "custom_source" })
 
-            eq("echo 'test'", specs.custom_source.spec_2.vcmd)
+            eq("echo 'test'", specs.custom_source.spec_2.vim_cmd)
         end)
     end)
 
@@ -91,14 +92,14 @@ describe("init", function()
                     test = Source:create({
                         specs = {
                             spec_1 = {
-                                vcmd = "echo 'hello'",
+                                vim_cmd = "echo 'hello'",
                             },
                         },
                     }),
                     test2 = Source:create({
                         specs = {
                             spec_2 = {
-                                vcmd = "echo 'hello2'",
+                                vim_cmd = "echo 'hello2'",
                             },
                         },
                     }),
@@ -107,7 +108,7 @@ describe("init", function()
 
             local specs = tasks.get_specs({ source_name = "test2" })
             assert.is.falsy(specs.test)
-            eq("echo 'hello2'", specs.test2.spec_2.vcmd)
+            eq("echo 'hello2'", specs.test2.spec_2.vim_cmd)
         end)
 
         it("get specs from a single runner", function()
@@ -116,11 +117,11 @@ describe("init", function()
                     test = Source:create({
                         specs = {
                             spec_1 = {
-                                vcmd = "echo 'hello1'",
+                                vim_cmd = "echo 'hello1'",
                                 runner_name = "runner1",
                             },
                             spec_2 = {
-                                vcmd = "echo 'hello2'",
+                                vim_cmd = "echo 'hello2'",
                                 runner_name = "runner2",
                             },
                         },
@@ -128,11 +129,11 @@ describe("init", function()
                     test2 = Source:create({
                         specs = {
                             spec_2 = {
-                                vcmd = "echo 'hello3'",
+                                vim_cmd = "echo 'hello3'",
                                 runner_name = "runner1",
                             },
                             spec_3 = {
-                                vcmd = "echo 'hello4'",
+                                vim_cmd = "echo 'hello4'",
                             },
                         },
                     }),
@@ -142,7 +143,7 @@ describe("init", function()
             local specs = tasks.get_specs({ runner_name = "runner2" })
             eq(1, #vim.tbl_keys(specs.test))
             eq(0, #vim.tbl_keys(specs.test2))
-            eq("echo 'hello2'", specs.test.spec_2.vcmd)
+            eq("echo 'hello2'", specs.test.spec_2.vim_cmd)
         end)
 
         it("get specs from a single runner: multiple results", function()
@@ -151,11 +152,11 @@ describe("init", function()
                     test = Source:create({
                         specs = {
                             spec_1 = {
-                                vcmd = "echo 'hello1'",
+                                vim_cmd = "echo 'hello1'",
                                 runner_name = "runner1",
                             },
                             spec_2 = {
-                                vcmd = "echo 'hello2'",
+                                vim_cmd = "echo 'hello2'",
                                 runner_name = "runner2",
                             },
                         },
@@ -163,11 +164,11 @@ describe("init", function()
                     test2 = Source:create({
                         specs = {
                             spec_2 = {
-                                vcmd = "echo 'hello3'",
+                                vim_cmd = "echo 'hello3'",
                                 runner_name = "runner1",
                             },
                             spec_3 = {
-                                vcmd = "echo 'hello4'",
+                                vim_cmd = "echo 'hello4'",
                             },
                         },
                     }),
@@ -177,8 +178,8 @@ describe("init", function()
             local specs = tasks.get_specs({ runner_name = "runner1" })
             eq(1, #vim.tbl_keys(specs.test))
             eq(1, #vim.tbl_keys(specs.test2))
-            eq("echo 'hello1'", specs.test.spec_1.vcmd)
-            eq("echo 'hello3'", specs.test2.spec_2.vcmd)
+            eq("echo 'hello1'", specs.test.spec_1.vim_cmd)
+            eq("echo 'hello3'", specs.test2.spec_2.vim_cmd)
         end)
     end)
 
@@ -194,17 +195,17 @@ describe("init", function()
                                 end,
                             },
                             spec_2 = {
-                                vcmd = "echo 'hello2'",
+                                vim_cmd = "echo 'hello2'",
                             },
                         },
                     }),
                     test2 = Source:create({
                         specs = {
                             spec_2 = {
-                                vcmd = "echo 'hello3'",
+                                vim_cmd = "echo 'hello3'",
                             },
                             spec_3 = {
-                                vcmd = "echo 'hello4'",
+                                vim_cmd = "echo 'hello4'",
                             },
                         },
                     }),
@@ -218,9 +219,7 @@ describe("init", function()
         end)
 
         it("returns the correct running tasks", function()
-            local task_id = tasks.run("wait_stop")
-
-            eq(1, task_id)
+            tasks.run("wait_stop")
 
             local tasks_running = tasks.get_running_tasks()
             eq(1, #vim.tbl_keys(tasks_running))
@@ -265,17 +264,17 @@ describe("init", function()
                                 runner_name = "custom_runner_2",
                             },
                             spec_2 = {
-                                vcmd = "echo 'hello2'",
+                                vim_cmd = "echo 'hello2'",
                             },
                         },
                     }),
                     test2 = Source:create({
                         specs = {
                             spec_2 = {
-                                vcmd = "echo 'hello3'",
+                                vim_cmd = "echo 'hello3'",
                             },
                             spec_3 = {
-                                vcmd = "echo 'hello4'",
+                                vim_cmd = "echo 'hello4'",
                             },
                         },
                     }),
@@ -292,13 +291,11 @@ describe("init", function()
 
         it("runs using the builtin runner", function()
             local task_id, task = tasks.run("wait_stop_builtin")
-            eq(1, task_id)
             task:request_stop()
         end)
 
         it("runs using custom runner", function()
-            local task_id, task = tasks.run("wait_stop_custom")
-            eq(1, task_id)
+            local _, task = tasks.run("wait_stop_custom")
             task:request_stop()
         end)
 
@@ -316,7 +313,6 @@ describe("init", function()
 
         it("sets the last spec correctly", function()
             local task_id, task = tasks.run("wait_stop_builtin")
-            eq(1, task_id)
             task:request_stop()
 
             eq("wait_stop_builtin", tasks.state.last_spec_ran.name)
@@ -325,7 +321,7 @@ describe("init", function()
 
             local new_task_id, new_task = tasks.run_last()
             new_task:request_stop()
-            eq(2, new_task_id)
+            neq(task_id, new_task_id)
             eq("wait_stop_builtin", task:get_spec_name())
             eq("test", task:get_source_name())
         end)
@@ -353,17 +349,17 @@ describe("init", function()
                                 runner_name = "custom_runner_2",
                             },
                             spec_2 = {
-                                vcmd = "echo 'hello2'",
+                                vim_cmd = "echo 'hello2'",
                             },
                         },
                     }),
                     test2 = Source:create({
                         specs = {
                             spec_2 = {
-                                vcmd = "echo 'hello3'",
+                                vim_cmd = "echo 'hello3'",
                             },
                             spec_3 = {
-                                vcmd = "echo 'hello4'",
+                                vim_cmd = "echo 'hello4'",
                             },
                         },
                     }),
@@ -392,21 +388,23 @@ describe("init", function()
                 end,
             })
 
-            local task_id, task = tasks.run("wait_stop_builtin")
+            local _, task = tasks.run("wait_stop_builtin")
             task:request_stop()
-            eq(1, task_id)
             eq("custom_runner", task:get_runner_name())
 
-            task_id, task = tasks.run("wait_stop_custom")
+            _, task = tasks.run("wait_stop_custom")
             task:request_stop()
-            eq(2, task_id)
             eq("builtin", task:get_runner_name())
 
             -- it still uses the default router if the custom router returns nil
-            task_id, task = tasks.run("wait_stop_custom_2")
+            _, task = tasks.run("wait_stop_custom_2")
             task:request_stop()
-            eq(3, task_id)
             eq("custom_runner_2", task:get_runner_name())
+        end)
+
+        it("get_task_dependencies", function()
+            local _, task = tasks.run("spec_3")
+            eq(true, task ~= nil)
         end)
     end)
 end)

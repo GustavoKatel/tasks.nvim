@@ -1,5 +1,7 @@
 local pasync = require("plenary.async")
 
+local _next_id = 1
+
 local Task = {}
 
 local function create_task_context(task)
@@ -7,10 +9,14 @@ local function create_task_context(task)
 end
 
 function Task:new(async_fn, args)
+    local id = _next_id
+    _next_id = _next_id + 1
+
     local t = {
+        id = id,
         fn = async_fn,
         args = args,
-        metadata = { spec = nil, spec_name = nil, source_name = nil, runner_name = nil, task_id = nil },
+        metadata = { spec = nil, spec_name = nil, source_name = nil, runner_name = nil },
         state = "ready",
         events = {},
         started_time = nil,
@@ -41,6 +47,14 @@ function Task:get_spec_name()
     return self.metadata.spec_name
 end
 
+function Task:get_spec()
+    if self.metadata == nil then
+        return nil
+    end
+
+    return self.metadata.spec
+end
+
 function Task:get_source_name()
     if self.metadata == nil then
         return nil
@@ -55,6 +69,10 @@ function Task:get_runner_name()
     end
 
     return self.metadata.runner_name
+end
+
+function Task:get_id()
+    return self.id
 end
 
 function Task:run()

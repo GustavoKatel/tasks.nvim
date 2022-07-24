@@ -1,6 +1,7 @@
 -- inspired by: https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/lua/null-ls/logger.lua
 
 local Path = require("plenary.path")
+local Error = require("tasks.lib.error")
 
 local async_vim_notify = vim.schedule_wrap(vim.notify)
 
@@ -31,6 +32,15 @@ local function format_props(props)
     return table.concat(ret, ", ")
 end
 
+local function expand_msg_and_props(msg, props)
+    if getmetatable(msg) == Error then
+        msg = msg.message
+        props = vim.tbl_deep_extend("force", msg.attrs or {}, props or {})
+    end
+
+    return msg, props
+end
+
 --- Adds a log entry using Plenary.log
 ---@param msg any
 ---@param props table key-value props to attach to the message
@@ -38,6 +48,8 @@ end
 function log:add_entry(msg, props, level)
     if not self.__notify_fmt then
         self.__notify_fmt = function(m, p)
+            m, p = expand_msg_and_props(m, p)
+
             if type(m) == "table" then
                 m = vim.inspect(m)
             end
@@ -48,6 +60,8 @@ function log:add_entry(msg, props, level)
     if self.level == "off" then
         return
     end
+
+    msg, props = expand_msg_and_props(msg, props)
 
     if type(msg) == "table" then
         msg = vim.inspect(msg)
