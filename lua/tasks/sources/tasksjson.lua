@@ -62,8 +62,6 @@ local function json_task_to_spec(index, json_task)
         label = string.format("task %d", index)
     end
 
-    -- TODO: task dependencies
-
     if type == "shell" then
         local default_shell = vim.env.SHELL or "bash"
 
@@ -79,11 +77,23 @@ local function json_task_to_spec(index, json_task)
 
     cmd = vim.tbl_flatten({ cmd })
 
-    return label, {
-        cmd = cmd,
-        cwd = cwd,
-        original = json_task,
-    }
+    local dependencies = vim.tbl_map(
+        function(spec_name)
+            return { spec_name = spec_name }
+        end,
+        vim.tbl_filter(function(t)
+            return t ~= nil
+        end, vim.tbl_flatten({ json_task["dependsOn"] or {} }))
+    )
+
+    return label,
+        {
+            cmd = cmd,
+            cwd = cwd,
+            original = json_task,
+            -- wrapping them in a single table, will make them run in parallel
+            dependencies = { dependencies },
+        }
 end
 
 return Source:create_from_source_file({

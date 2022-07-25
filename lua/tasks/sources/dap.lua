@@ -1,9 +1,12 @@
 local Source = require("tasks.lib.source")
 local conditions = require("tasks.lib.conditions")
 local pasync = require("tasks.lib.async")
+local fs = require("tasks.lib.fs")
 
 local source = Source:create({
     conditions = { conditions.has_module("dap") },
+
+    load_launchjson = true,
 })
 
 local function configuration_to_spec(config)
@@ -41,6 +44,8 @@ local function configuration_to_spec(config)
                 end)
             end,
 
+            dependencies = config.preLaunchTask ~= "" and { { spec_name = config.preLaunchTask } } or {},
+
             dap_config = config,
         }
 end
@@ -57,6 +62,23 @@ function source:get_specs()
 
             specs[name] = spec
         end
+    end
+
+    local condition = conditions.file_exists(".vscode/launch.json")
+    if not condition() then
+        print("no launch.json")
+        return specs
+    end
+
+    local launchjson = fs.read_json_file(".vscode/launch.json")
+
+    -- TODO: compounds: https://code.visualstudio.com/docs/editor/debugging#_compound-launch-configurations
+    for _, config in ipairs(launchjson.configurations or {}) do
+        local name, spec = configuration_to_spec(config)
+
+        name = string.format("%s [launch.json]", name)
+
+        specs[name] = spec
     end
 
     return specs
