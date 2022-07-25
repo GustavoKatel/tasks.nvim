@@ -3,26 +3,7 @@ local Task = require("tasks.lib.task")
 
 local _next_id = 1
 
-local TaskGroup = {
-    id = 0,
-
-    group = {},
-
-    stop_tx = nil,
-    stop_rx = nil,
-
-    is_stopped = false,
-
-    finished = {},
-    finished_count = 0,
-
-    running = {},
-    running_count = 0,
-
-    events = {},
-
-    semaphore = nil,
-}
+local TaskGroup = {}
 
 local function normalize_sub_group(subgroup)
     assert(
@@ -78,12 +59,20 @@ function TaskGroup:new(group_def)
     local tg = {
         id = id,
 
+        is_stopped = false,
+
+        finished = {},
+        running = {},
+
+        count_lock = false,
+        state_cache = nil,
+
+        events = {},
+
         group = normalize_group_def(group_def),
 
         stop_tx = stop_tx,
         stop_rx = stop_rx,
-
-        semaphore = pasync.control.Semaphore.new(1),
     }
 
     setmetatable(tg, self)
@@ -151,19 +140,13 @@ function TaskGroup:get_total_tasks()
     return total
 end
 
--- TODO: this is my first attempt to sync these two values
--- we need to make sure they are always in sync, especially when calling from outside the lua loop
--- tests are flaky because of this
 function TaskGroup:update_counters(cb)
     pasync.run(function()
-        local permit = self.semaphore:acquire()
+        self.count_lock = true
 
         local ok, ret_or_err = pcall(cb)
 
-        self.running_count = #vim.tbl_keys(self.running)
-        self.finished_count = #vim.tbl_keys(self.finished)
-
-        permit:forget()
+        self.count_lock = false
 
         if not ok then
             error(ret_or_err)
@@ -172,11 +155,18 @@ function TaskGroup:update_counters(cb)
 end
 
 function TaskGroup:get_state()
-    return {
-        finished = self.finished_count,
-        running = self.running_count,
+    -- if in the middle of an update, use previous cache (if any)
+    if self.count_lock and self.state_cache ~= nil then
+        return self.state_cache
+    end
+
+    self.state_cache = {
+        finished = #vim.tbl_keys(self.finished),
+        running = #vim.tbl_keys(self.running),
         total = self:get_total_tasks(),
     }
+
+    return self.state_cache
 end
 
 function TaskGroup:on_finish(fn)
