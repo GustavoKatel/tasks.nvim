@@ -1,10 +1,12 @@
-local action_state = require("telescope.actions.state")
 local actions = require("telescope.actions")
 local finders = require("telescope.finders")
 local pickers = require("telescope.pickers")
 local conf = require("telescope.config").values
 
 local tasks = require("tasks")
+
+local tasks_actions = require("telescope._extensions.tasks.actions")
+local tasks_telescope_config = require("telescope._extensions.tasks.config")
 
 -- heavily inspired by: https://github.com/ThePrimeagen/harpoon/blob/master/lua/telescope/_extensions/marks.lua
 
@@ -40,20 +42,17 @@ end
 return function(opts)
     opts = opts or {}
 
-    pickers.new(opts, {
-        prompt_title = "tasks: running",
-        finder = generate_new_finder(opts),
-        sorter = conf.generic_sorter(opts),
-        attach_mappings = function(prompt_bufnr, _map)
-            actions.select_default:replace(function()
-                actions.close(prompt_bufnr)
-                local selection = action_state.get_selected_entry()
+    pickers
+        .new(opts, {
+            prompt_title = "tasks: running",
+            finder = generate_new_finder(opts),
+            sorter = conf.generic_sorter(opts),
+            attach_mappings = function(prompt_bufnr, map)
+                actions.select_default:replace(tasks_actions.open_buffer())
 
-                local task = selection.value.task
-
-                task:request_stop()
-            end)
-            return true
-        end,
-    }):find()
+                tasks_telescope_config.attach_mappings("running", prompt_bufnr, map)
+                return true
+            end,
+        })
+        :find()
 end

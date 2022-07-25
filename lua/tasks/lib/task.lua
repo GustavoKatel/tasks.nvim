@@ -1,16 +1,28 @@
 local pasync = require("plenary.async")
 
+local _next_id = 1
+
 local Task = {}
 
+local function create_task_context(task)
+    return { stop_request_receiver = task.stop_rx, metadata = task.metadata }
+end
+
 function Task:new(async_fn, args)
+    local id = _next_id
+    _next_id = _next_id + 1
+
     local t = {
+        id = id,
         fn = async_fn,
         args = args,
-        metadata = { spec = nil, spec_name = nil, source_name = nil, runner_name = nil, task_id = nil },
+        metadata = { spec = nil, spec_name = nil, source_name = nil, runner_name = nil },
         state = "ready",
         events = {},
         started_time = nil,
         finished_time = nil,
+
+        ctx = nil,
     }
 
     local stop_tx, stop_rx = pasync.control.channel.oneshot()
@@ -35,6 +47,14 @@ function Task:get_spec_name()
     return self.metadata.spec_name
 end
 
+function Task:get_spec()
+    if self.metadata == nil then
+        return nil
+    end
+
+    return self.metadata.spec
+end
+
 function Task:get_source_name()
     if self.metadata == nil then
         return nil
@@ -51,16 +71,18 @@ function Task:get_runner_name()
     return self.metadata.runner_name
 end
 
-local function create_task_context(task)
-    return { stop_request_receiver = task.stop_rx }
+function Task:get_id()
+    return self.id
 end
 
 function Task:run()
     self.state = "running"
     self.started_time = vim.loop.hrtime()
 
+    self.ctx = create_task_context(self)
+
     pasync.run(function()
-        self.fn(create_task_context(self), self.args)
+        self.fn(self.ctx, self.args)
     end, function()
         self.state = "done"
         self.finished_time = vim.loop.hrtime()
