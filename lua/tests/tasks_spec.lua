@@ -225,9 +225,7 @@ describe("init", function()
             eq(1, #vim.tbl_keys(tasks_running))
 
             -- second run
-            task_id = tasks.run("wait_stop")
-
-            eq(2, task_id)
+            tasks.run("wait_stop")
 
             tasks_running = tasks.get_running_tasks()
             eq(2, #vim.tbl_keys(tasks_running))
@@ -290,7 +288,7 @@ describe("init", function()
         end)
 
         it("runs using the builtin runner", function()
-            local task_id, task = tasks.run("wait_stop_builtin")
+            local _, task = tasks.run("wait_stop_builtin")
             task:request_stop()
         end)
 

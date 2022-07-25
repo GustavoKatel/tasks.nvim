@@ -37,9 +37,7 @@ local function normalize_group_def(group)
     for _, task_or_subgroup in ipairs(group or {}) do
         if getmetatable(task_or_subgroup) == Task then
             table.insert(ret, { task_or_subgroup })
-        elseif task_or_subgroup == nil then
-            -- skip
-        else
+        elseif task_or_subgroup ~= nil then
             table.insert(ret, normalize_sub_group(task_or_subgroup))
         end
     end
@@ -47,7 +45,8 @@ local function normalize_group_def(group)
     return ret
 end
 
--- @param group_def table list of Task to run sequentially, each item can be a Task or a nested list of Task, which will run all Tasks in parallel
+-- @param group_def table list of Task to run sequentially
+-- each item can be a Task or a nested list of Task, which will run all Tasks in parallel
 function TaskGroup:new(group_def)
     assert(type(group_def) == "table", "'group_def' need to be table or Task")
 

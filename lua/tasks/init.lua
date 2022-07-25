@@ -119,8 +119,8 @@ function M.run(name, args, source_name, runner_opts)
         return
     end
 
-    local ok, deps = pcall(M.get_task_dependencies, task)
-    if not ok then
+    local ok2, deps = pcall(M.get_task_dependencies, task)
+    if not ok2 then
         -- deps here is an Error
         logger:error(deps)
         return
