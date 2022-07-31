@@ -2,6 +2,7 @@ local Source = require("tasks.lib.source")
 local conditions = require("tasks.lib.conditions")
 local pasync = require("tasks.lib.async")
 local fs = require("tasks.lib.fs")
+local logger = require("tasks.logger")
 
 local source = Source:create({
     conditions = { conditions.has_module("dap") },
@@ -10,41 +11,41 @@ local source = Source:create({
 })
 
 local function configuration_to_spec(config)
+    local dependencies = {}
+
+    if config.preLaunchTask ~= "" and config.preLaunchTask ~= nil then
+        dependencies = { { spec_name = config.preLaunchTask } }
+    end
+
     return config["name"],
         {
             fn = function(ctx)
-                local terminated_tx, terminated_rx = pasync.control.channel.oneshot()
+                local terminated_tx, terminated_rx = pasync.control.channel.mpsc()
 
                 local dap = require("dap")
+
+                local handler_name = "tasks.nvim_task_id:" .. ctx.id
+
+                dap.listeners.after["event_terminated"][handler_name] = function(session, body)
+                    terminated_tx.send()
+                end
 
                 vim.schedule(function()
                     dap.run(config)
                 end)
 
-                local timer = vim.loop.new_timer()
-                timer:start(100, 500, function()
-                    if dap.session() == nil then
-                        timer:stop()
-                        timer:close()
-                        terminated_tx()
-                    end
-                end)
-
                 pasync.run(function()
                     ctx.stop_request_receiver()
-                    terminated_tx()
+                    dap.terminate()
+                    terminated_tx.send()
                 end)
 
-                terminated_rx()
+                terminated_rx.recv()
 
-                vim.schedule(function()
-                    if dap.session() ~= nil then
-                        dap.terminate()
-                    end
-                end)
+                dap.listeners.after["event_terminated"][handler_name] = nil
             end,
 
-            dependencies = config.preLaunchTask ~= "" and { { spec_name = config.preLaunchTask } } or {},
+            dependencies = dependencies,
 
             dap_config = config,
         }
@@ -66,7 +67,7 @@ function source:get_specs()
 
     local condition = conditions.file_exists(".vscode/launch.json")
     if not condition() then
-        print("no launch.json")
+        logger:debug("no '.vscode/launch.json'")
         return specs
     end
 
@@ -85,5 +86,3 @@ function source:get_specs()
 end
 
 return source
-
---return M

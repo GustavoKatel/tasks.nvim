@@ -5,7 +5,7 @@ local _next_id = 1
 local Task = {}
 
 local function create_task_context(task)
-    return { stop_request_receiver = task.stop_rx, metadata = task.metadata }
+    return { stop_request_receiver = task.stop_rx, metadata = task.metadata, id = task:get_id() }
 end
 
 function Task:new(async_fn, args)
