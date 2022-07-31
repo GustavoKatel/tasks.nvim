@@ -26,7 +26,7 @@ local function configuration_to_spec(config)
 
                 local handler_name = "tasks.nvim_task_id:" .. ctx.id
 
-                dap.listeners.after["event_terminated"][handler_name] = function(session, body)
+                dap.listeners.after["event_terminated"][handler_name] = function(_session, _body)
                     terminated_tx.send()
                 end
 

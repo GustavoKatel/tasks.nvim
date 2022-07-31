@@ -5,7 +5,13 @@ local _next_id = 1
 local Task = {}
 
 local function create_task_context(task)
-    return { stop_request_receiver = task.stop_rx, metadata = task.metadata, id = task:get_id() }
+    return {
+        stop_request_receiver = function()
+            task.stop_rx.recv()
+        end,
+        metadata = task.metadata,
+        id = task:get_id(),
+    }
 end
 
 function Task:new(async_fn, args)
@@ -25,7 +31,7 @@ function Task:new(async_fn, args)
         ctx = nil,
     }
 
-    local stop_tx, stop_rx = pasync.control.channel.oneshot()
+    local stop_tx, stop_rx = pasync.control.channel.mpsc()
 
     t.stop_tx = stop_tx
     t.stop_rx = stop_rx
@@ -109,7 +115,7 @@ function Task:dispatch_event(event_name, args)
 end
 
 function Task:request_stop()
-    self.stop_tx()
+    self.stop_tx.send()
 end
 
 function Task:get_started_time()
