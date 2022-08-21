@@ -16,9 +16,7 @@ local function wrap_task_fn(fn, spec)
     end
 end
 
-local function wrap_task_terminal(self, spec, runner_opts)
-    runner_opts = runner_opts or {}
-
+local function wrap_task_terminal(self, spec, _runner_opts)
     return function(ctx, args)
         local tx, rx = pasync.control.channel.oneshot()
 
@@ -43,7 +41,7 @@ local function wrap_task_terminal(self, spec, runner_opts)
             end
         end
 
-        local terminal_job = terminal.create_terminal_job(ctx, self.sticky_termininal_window_number, cmd, {
+        local terminal_job = terminal.create_terminal_job(self.sticky_termininal_window_number, cmd, {
             env = env,
             cwd = spec.cwd,
             buf_name = string.format("%s [%s] [id:%d]", ctx.metadata.spec_name, ctx.metadata.source_name, ctx.id),

@@ -2,9 +2,9 @@ local pasync = require("tasks.lib.async")
 
 local M = {}
 
-function M.create_terminal_job(spec, window_nr, cmd, opts)
-    local job_id = nil
-    local term_id = nil
+function M.create_terminal_job(window_nr, cmd, opts)
+    local job_id
+    local term_id
 
     job_id = pasync.fn.jobstart(cmd, {
         pty = true,
@@ -23,10 +23,10 @@ function M.create_terminal_job(spec, window_nr, cmd, opts)
                 end
             end
         end,
-        on_exit = function(_job_id, code)
+        on_exit = function(job_id_from_cb, code)
             job_id = nil
             if opts.on_exit then
-                opts.on_exit(_job_id, code)
+                opts.on_exit(job_id_from_cb, code)
             end
 
             vim.api.nvim_chan_send(term_id, "task finished! Job code: " .. code)
