@@ -2,6 +2,7 @@ local pasync = require("tasks.lib.async")
 local Task = require("tasks.lib.task")
 local Runner = require("tasks.lib.runner")
 local utils = require("tasks.utils")
+local terminal = require("tasks.terminal")
 
 local function replace_variables(list, spec)
     return vim.tbl_map(function(item)
@@ -25,30 +26,16 @@ local function wrap_task_terminal(self, spec, runner_opts)
 
         local env = spec.env or {}
 
-        local env_concat = table.concat(
-            vim.tbl_map(function(env_name)
-                return env_name .. "=" .. env[env_name]
-            end, vim.tbl_keys(env)),
-            " "
-        )
+        local cmd = table.concat(replace_variables({ spec.cmd, args }, spec), " ")
 
-        if env_concat ~= "" then
-            env_concat = env_concat .. " "
-        end
+        local current_window_nr = vim.api.nvim_get_current_win()
 
-        local cmd = table.concat(replace_variables({ env_concat, spec.cmd, args }, spec), " ")
-
-        local edit_cmd = runner_opts.terminal_edit_command or self.terminal_edit_command or "edit"
-
-        cmd = edit_cmd .. " term://" .. (spec.cwd or vim.loop.cwd()) .. "//" .. cmd
-
-        local current_window_nr = vim.api.nvim_win_get_number(vim.api.nvim_get_current_win())
         if self.sticky_terminal_window then
             if
                 self.sticky_termininal_window_number ~= nil
                 and self.sticky_termininal_window_number ~= current_window_nr
             then
-                vim.cmd(self.sticky_termininal_window_number .. "wincmd w")
+                pasync.api.nvim_set_current_win(self.sticky_termininal_window_number)
             end
 
             if self.sticky_termininal_window_number == nil then
@@ -56,31 +43,26 @@ local function wrap_task_terminal(self, spec, runner_opts)
             end
         end
 
-        vim.cmd(cmd)
-
-        local buffer = vim.api.nvim_get_current_buf()
-        local term_id = vim.b.terminal_job_id
-
-        ctx.metadata.buffer = buffer
-        ctx.metadata.term_id = term_id
-
-        pasync.run(function()
-            ctx.stop_request_receiver()
-            vim.fn.jobstop(term_id)
-        end)
-
-        vim.api.nvim_buf_set_option(buffer, "bufhidden", "hide")
-
-        vim.api.nvim_create_autocmd({ "TermClose" }, {
-            buffer = buffer,
-            callback = function(event)
-                tx(event)
+        local terminal_job = terminal.create_terminal_job(ctx, self.sticky_termininal_window_number, cmd, {
+            env = env,
+            cwd = spec.cwd,
+            buf_name = string.format("%s [%s] [id:%d]", ctx.metadata.spec_name, ctx.metadata.source_name, ctx.id),
+            on_exit = function(_, code)
+                tx(code)
             end,
         })
 
+        ctx.metadata.buffer = terminal_job.bufnr
+        ctx.metadata.job_id = terminal_job.job_id
+
+        pasync.run(function()
+            ctx.stop_request_receiver()
+            vim.fn.jobstop(terminal_job.job_id)
+        end)
+
         if self.sticky_terminal_window then
             if current_window_nr ~= self.sticky_termininal_window_number then
-                vim.cmd("wincmd p")
+                pasync.api.nvim_set_current_win(current_window_nr)
             end
         end
 
@@ -92,8 +74,6 @@ local builtin = Runner:create({
     sticky_terminal_window = false,
 
     sticky_termininal_window_number = nil,
-
-    terminal_edit_command = "edit",
 })
 
 function builtin:create_task(spec, args, runner_opts)
