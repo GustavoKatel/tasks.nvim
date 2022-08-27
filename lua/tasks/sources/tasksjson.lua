@@ -92,7 +92,7 @@ local function json_task_to_spec(index, json_task)
             cwd = cwd,
             original = json_task,
             -- wrapping them in a single table, will make them run in parallel
-            dependencies = { dependencies },
+            dependencies = #dependencies > 0 and { dependencies } or {},
         }
 end
 

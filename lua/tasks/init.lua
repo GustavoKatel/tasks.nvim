@@ -160,8 +160,12 @@ function M.run_last()
 end
 
 local function pull_specs_from_source(source_name, source, logger_props)
-    if not source:verify_conditions() then
-        logger:debug("source skipped due to falsy conditions", { source_name = source_name })
+    local conditions_check = source:verify_conditions()
+    if not conditions_check.result then
+        logger:debug(
+            "source skipped due to falsy condition",
+            { source_name = source_name, condition = conditions_check.message }
+        )
         return
     end
     local ok, specs = pcall(source.get_specs, source)

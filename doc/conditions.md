@@ -4,9 +4,20 @@ Helpers ready to be used in [Sources](./source.md).
 
 Use this to enable/disable sources based on requirements.
 
+A condition is a function that returns `ConditionResult`
+
+## ConditionResult
+
+```lua
+{
+    result = <boolean>, -- true or false - the result of the condition check
+    message = <string>, -- optional message explaining why the condition is falsy
+}
+```
+
 ## conditions.file_exists()
 
-Returns `true` or `false` based on the existence of the specified file.
+Returns valid or not based on the existence of the specified file.
 
 Example:
 
@@ -25,7 +36,7 @@ In the example, the spec "build" will only be available if there's a `Cargo.toml
 
 ## conditions.has_module()
 
-Returns `true` or `false` based on the existence of the specified lua module.
+Returns valid or not based on the existence of the specified lua module.
 
 Example:
 

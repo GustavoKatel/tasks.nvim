@@ -19,7 +19,7 @@ function Source:create_from_source_file(opts)
 
     local obj = self:create(vim.tbl_extend("force", opts, {
         conditions = {
-            conditions.file_exists("Cargo.toml"),
+            conditions.file_exists(opts.filename),
         },
         reloaders = { reloaders.file_changed(opts.filename), unpack(opts.reloaders or {}) },
         get_specs = function(s)
@@ -47,12 +47,13 @@ end
 
 function Source:verify_conditions()
     for _, condition in ipairs(self.conditions or {}) do
-        if not condition() then
-            return false
+        local condition_check = condition()
+        if not condition_check.result then
+            return condition_check
         end
     end
 
-    return true
+    return { result = true }
 end
 
 return Source

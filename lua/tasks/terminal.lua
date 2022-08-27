@@ -29,7 +29,7 @@ function M.create_terminal_job(window_nr, cmd, opts)
                 opts.on_exit(job_id_from_cb, code)
             end
 
-            vim.api.nvim_chan_send(term_id, "task finished! Job code: " .. code)
+            vim.api.nvim_chan_send(term_id, "task finished! Exit code: " .. code)
         end,
     })
 
