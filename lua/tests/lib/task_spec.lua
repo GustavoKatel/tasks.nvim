@@ -66,7 +66,7 @@ describe("task", function()
 
         local task = Task:new(function(ctx)
             -- this will just block waiting for the stop request
-            ctx.stop_request_receiver()
+            ctx.wait_stop_requested()
 
             stop_requested = true
         end)

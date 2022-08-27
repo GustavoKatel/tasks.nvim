@@ -6,7 +6,7 @@ local Task = {}
 
 local function create_task_context(task)
     return {
-        stop_request_receiver = function()
+        wait_stop_requested = function()
             task.stop_rx.recv()
         end,
         metadata = task.metadata,

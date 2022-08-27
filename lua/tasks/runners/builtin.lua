@@ -54,7 +54,7 @@ local function wrap_task_terminal(self, spec, _runner_opts)
         ctx.metadata.job_id = terminal_job.job_id
 
         pasync.run(function()
-            ctx.stop_request_receiver()
+            ctx.wait_stop_requested()
             vim.fn.jobstop(terminal_job.job_id)
         end)
 

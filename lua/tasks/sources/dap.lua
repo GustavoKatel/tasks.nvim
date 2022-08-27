@@ -35,7 +35,7 @@ local function configuration_to_spec(config)
                 end)
 
                 pasync.run(function()
-                    ctx.stop_request_receiver()
+                    ctx.wait_stop_requested()
                     dap.terminate()
                     terminated_tx.send()
                 end)

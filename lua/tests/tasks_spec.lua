@@ -191,7 +191,7 @@ describe("init", function()
                         specs = {
                             wait_stop = {
                                 fn = function(ctx)
-                                    ctx.stop_request_receiver()
+                                    ctx.wait_stop_requested()
                                 end,
                             },
                             spec_2 = {
@@ -246,18 +246,18 @@ describe("init", function()
                         specs = {
                             wait_stop_builtin = {
                                 fn = function(ctx)
-                                    ctx.stop_request_receiver()
+                                    ctx.wait_stop_requested()
                                 end,
                             },
                             wait_stop_custom = {
                                 fn = function(ctx)
-                                    ctx.stop_request_receiver()
+                                    ctx.wait_stop_requested()
                                 end,
                                 runner_name = "custom_runner",
                             },
                             wait_stop_custom_2 = {
                                 fn = function(ctx)
-                                    ctx.stop_request_receiver()
+                                    ctx.wait_stop_requested()
                                 end,
                                 runner_name = "custom_runner_2",
                             },
@@ -331,18 +331,18 @@ describe("init", function()
                         specs = {
                             wait_stop_builtin = {
                                 fn = function(ctx)
-                                    ctx.stop_request_receiver()
+                                    ctx.wait_stop_requested()
                                 end,
                             },
                             wait_stop_custom = {
                                 fn = function(ctx)
-                                    ctx.stop_request_receiver()
+                                    ctx.wait_stop_requested()
                                 end,
                                 runner_name = "custom_runner",
                             },
                             wait_stop_custom_2 = {
                                 fn = function(ctx)
-                                    ctx.stop_request_receiver()
+                                    ctx.wait_stop_requested()
                                 end,
                                 runner_name = "custom_runner_2",
                             },
