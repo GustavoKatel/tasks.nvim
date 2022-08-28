@@ -1,5 +1,7 @@
 local pasync = require("tasks.lib.async")
 local Task = require("tasks.lib.task")
+local task_state = require("tasks.lib.task_state")
+local CancelToken = require("tasks.lib.cancel_token")
 
 local _next_id = 1
 
@@ -53,12 +55,8 @@ function TaskGroup:new(group_def)
     local id = _next_id
     _next_id = _next_id + 1
 
-    local stop_tx, stop_rx = pasync.control.channel.oneshot()
-
     local tg = {
         id = id,
-
-        is_stopped = false,
 
         finished = {},
         running = {},
@@ -70,8 +68,7 @@ function TaskGroup:new(group_def)
 
         group = normalize_group_def(group_def),
 
-        stop_tx = stop_tx,
-        stop_rx = stop_rx,
+        cancel_token = CancelToken:new(),
     }
 
     setmetatable(tg, self)
@@ -84,7 +81,15 @@ function TaskGroup:run_group_level(tasks)
 
     for _, task in ipairs(tasks) do
         local finished_tx, finished_rx = pasync.control.channel.oneshot()
+
+        task.cancel_token:prepend(self.cancel_token)
+
         task:on_finish(function()
+            print("task finished with status:", task:get_id(), task:get_state())
+            if task:get_state() == task_state.CANCELLED then
+                self:request_stop()
+            end
+
             finished_tx()
             self:update_counters(function()
                 self.finished[task:get_id()] = task
@@ -108,7 +113,7 @@ function TaskGroup:run()
     local current_level = {}
 
     pasync.run(function()
-        self.stop_rx()
+        self.cancel_token:wait()
 
         for _, task in ipairs(current_level) do
             task:request_stop()
@@ -116,17 +121,20 @@ function TaskGroup:run()
     end)
 
     for _, tasks in ipairs(self.group) do
-        if self.is_stopped then
-            break
+        if not self.cancel_token:is_cancelled() then
+            current_level = tasks
+            self:run_group_level(tasks)
+        else
+            for _, task in ipairs(tasks) do
+                print("request task id to stop:", task:get_id())
+                task:request_stop()
+            end
         end
-
-        self.current_level = tasks
-        self:run_group_level(tasks)
     end
 end
 
 function TaskGroup:request_stop()
-    self.stop_tx()
+    self.cancel_token:cancel()
 end
 
 function TaskGroup:get_total_tasks()
