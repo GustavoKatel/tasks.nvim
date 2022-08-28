@@ -10,7 +10,7 @@ A task object has a few helper methods.
 
 ## task:get_state()
 
-Returns the current task state, which can evolve from `ready` -> `running` -> `done`.
+Returns the current task state, which can evolve from `ready` -> `running` -> `done` | `cancelled`.
 
 ## task:request_stop()
 
