@@ -65,8 +65,8 @@ function source:get_specs()
         end
     end
 
-    local condition = conditions.file_exists(".vscode/launch.json")
-    if not condition() then
+    local result = conditions.file_exists(".vscode/launch.json")()
+    if not result.result then
         logger:debug("no '.vscode/launch.json'")
         return specs
     end
