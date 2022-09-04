@@ -74,6 +74,12 @@ function M.replace_variables(arg, inputs)
     return arg
 end
 
+function M.replace_variables_in_list(arg_list, inputs)
+    return vim.tbl_map(function(item)
+        return M.replace_variables(item, inputs)
+    end, vim.tbl_flatten({ arg_list }))
+end
+
 function M.build_prompt(input)
     if input.type == "pickString" then
         return function(cb)

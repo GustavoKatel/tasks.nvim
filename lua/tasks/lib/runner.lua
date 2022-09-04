@@ -1,4 +1,6 @@
-local Runner = {}
+local Runner = {
+    priority = 10,
+}
 
 Runner.__index = Runner
 
@@ -12,6 +14,10 @@ end
 
 function Runner:with(opts_overrides)
     return self:create(opts_overrides)
+end
+
+function Runner:can_handle_spec(_spec_name, _spec, _args)
+    return true
 end
 
 function Runner:create_task(_spec, _args)

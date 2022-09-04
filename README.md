@@ -163,8 +163,6 @@ tasks.setup({
 
 					pasync.util.sleep(10000)
 				end,
-                -- this prop will route this task to the custom runner
-                runner_name = "custom_runner"
 			},
 		}}),
     }

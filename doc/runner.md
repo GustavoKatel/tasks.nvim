@@ -35,9 +35,13 @@ end
 
 Please refer to `replace_variables` in [utils](./utils.md) to see how to integrate variable substitution to your runner.
 
-## Runner:create()
+## Runner:create(opts)
 
 Create a new runner with default options
+
+Base options (`opts`) are as follows:
+
+- `priority` (number) this runner priority
 
 Example:
 

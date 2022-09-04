@@ -2,6 +2,9 @@ local pasync = require("plenary.async")
 local logger = require("tasks.logger")
 local TaskGroup = require("tasks.lib.task_group")
 local Error = require("tasks.lib.error")
+local priority_router = require("tasks.routers.priority")
+
+local default_runners = require("tasks.runners.defaults")
 
 local M = {}
 
@@ -9,11 +12,9 @@ local DefaultConfig = {
     -- Array<Source>
     sources = {},
     -- Array<Runner>
-    runners = {
-        builtin = require("tasks.runners.builtin"),
-    },
+    runners = vim.tbl_extend("force", {}, default_runners),
 
-    router = nil,
+    router = priority_router,
 
     logger = {
         level = "warn",
@@ -37,12 +38,13 @@ M.state = {
 M._spec_listener_tx = nil
 
 function M.setup(config)
-    local logger_opts = vim.tbl_deep_extend("force", DefaultConfig.logger, M.config.logger or {}, config.logger or {})
+    config = config or {}
+
+    local logger_opts = vim.tbl_deep_extend("force", {}, DefaultConfig.logger, config.logger or {})
+
     M.config = vim.tbl_extend("force", M.config, config or {}, { logger = logger_opts })
 
-    if M.config.runners.builtin == nil then
-        M.config.runners.builtin = require("tasks.runners.builtin")
-    end
+    M.config.runners = vim.tbl_extend("force", {}, default_runners, M.config.runners or {})
 
     logger:setup(config.logger)
 
@@ -54,29 +56,23 @@ end
 function M.create_task(name, args, source_name, runner_opts)
     logger:debug("creating task from spec name", { name = name, source_name = source_name })
     local spec
-    local source
 
     if source_name == nil then
         for _source_name, source_specs in pairs(M.state.specs) do
             if source_specs[name] ~= nil then
                 spec = source_specs[name]
-                source = M.config.sources[_source_name]
                 source_name = _source_name
                 break
             end
         end
     else
-        source = M.config.sources[source_name]
         spec = (M.state.specs[source_name] or {})[name]
     end
 
     assert(spec ~= nil, Error:new("task spec not found", { name = name, source_name = source_name }))
 
-    local runner_name = spec.runner_name or source.runner_name or "builtin"
-
-    if M.config.router ~= nil then
-        runner_name = M.config.router(name, spec, args, source_name) or runner_name
-    end
+    local runner_name = M.config.router(name, spec, args, M.config.runners)
+    assert(runner_name, Error:new("router could not resolve runner", { spec_name = name, spec = spec, args = args }))
 
     local runner = M.config.runners[runner_name]
 
@@ -234,10 +230,6 @@ local function start_specs_listener()
 
             local specs = ret.specs or {}
 
-            for _, spec in pairs(specs) do
-                spec.runner_name = spec.runner_name or "builtin"
-            end
-
             logger:debug("updating specs for source", { source_name = ret.source_name, spec_count = #specs })
 
             M.state.specs[ret.source_name] = specs
@@ -257,7 +249,7 @@ end
 
 -- @param table opts
 function M.get_specs(opts)
-    opts = vim.tbl_deep_extend("force", { source_name = nil, runner_name = nil }, opts or {})
+    opts = vim.tbl_deep_extend("force", { source_name = nil }, opts or {})
 
     local results = {}
 
@@ -268,9 +260,7 @@ function M.get_specs(opts)
             results[source_name] = {}
 
             for spec_name, spec in pairs(specs) do
-                if opts.runner_name == nil or opts.runner_name == spec.runner_name then
-                    results[source_name][spec_name] = vim.deepcopy(spec)
-                end
+                results[source_name][spec_name] = vim.deepcopy(spec)
             end
         end
     end
