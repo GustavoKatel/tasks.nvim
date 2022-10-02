@@ -14,7 +14,7 @@ function M.jsonc_no_comment(content)
     local lines = vim.split(content, "\n")
     -- iterate over query match metadata
     for _, _, metadata in query:iter_matches(root, content, root:start(), root:end_()) do
-        local region = metadata.content[1]
+        local region = metadata[1].range
         local line = region[1] + 1
         local col_start = region[2]
         -- remove comment by extracting the text before
