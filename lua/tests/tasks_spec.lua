@@ -1,90 +1,114 @@
 local tasks = require("tasks")
 local Tasks = require("tasks.lib.task")
-local builtin_source = require("tasks.sources.builtin")
+local Source = require("tasks.lib.source")
 local pasync = require("plenary.async")
+local reloaders = require("tasks.lib.reloaders")
+local priority_router = require("tasks.routers.priority")
+local default_runners = require("tasks.runners.defaults")
 
 local test_helpers = require("tests.helpers")
 
 local eq = assert.are.same
+local neq = assert.are_not.same
 
 describe("init", function()
     it("reloads task specs in setup", function()
         test_helpers.tasks_setup({
             sources = {
-                test = builtin_source.new_builtin_source({
-                    spec_1 = {
-                        vcmd = "echo 'hello'",
+                test = Source:create({
+                    specs = {
+                        spec_1 = {
+                            vim_cmd = "echo 'hello'",
+                        },
                     },
                 }),
             },
         })
 
-        assert.is.truthy(tasks.config.runners.builtin)
+        assert.is.truthy(tasks.config.runners.vim_cmd)
         assert.is.truthy(tasks._spec_listener_tx)
 
         local specs = tasks.get_specs()
-        eq("echo 'hello'", specs.test.spec_1.vcmd)
+        eq("echo 'hello'", specs.test.spec_1.vim_cmd)
     end)
 
-    it("starts listening to specs from sources", function()
+    it("creates reloaders from sources", function()
+        local reloaded = false
+
         test_helpers.tasks_setup({
             sources = {
-                test = builtin_source.new_builtin_source({
-                    spec_1 = {
-                        vcmd = "echo 'hello'",
+                test = Source:create({
+                    specs = {
+                        spec_1 = {
+                            vim_cmd = "echo 'hello'",
+                        },
                     },
                 }),
 
-                custom_source = {
+                custom_source = Source:create({
                     get_specs = function()
-                        return {}
-                    end,
+                        if reloaded then
+                            return {
+                                spec_2 = {
+                                    vim_cmd = "echo 'test'",
+                                },
+                            }
+                        end
 
-                    start_specs_listener = function(_, tx)
-                        pasync.run(function()
-                            for i = 1, 4 do
-                                pasync.util.sleep(500)
-                                tx({ spec_2_1 = { vcmd = tostring(i) }, spec_2_2 = { vcmd = tostring(i + 1) } })
-                            end
-                        end)
+                        return nil
                     end,
-                },
+                    reloaders = {
+                        reloaders.autocmd("User", "TestSource"),
+                    },
+                }),
             },
         })
 
         local specs = tasks.get_specs({ source_name = "custom_source" })
-        assert.is.falsy(specs.custom_source.spec_2_1)
-        assert.is.falsy(specs.custom_source.spec_2_2)
+        assert.is.falsy(specs.custom_source.spec_2)
+
+        local autocmds = vim.api.nvim_get_autocmds({
+            group = "TasksNvimSourceReloaders",
+            event = { "User" },
+            pattern = { "TestSource" },
+        })
+
+        eq(1, #autocmds)
+
+        reloaded = true
+        vim.cmd("doautocmd TasksNvimSourceReloaders User TestSource")
 
         pasync.util.block_on(function()
             pasync.util.sleep(600)
 
             specs = tasks.get_specs({ source_name = "custom_source" })
 
-            eq("1", specs.custom_source.spec_2_1.vcmd)
-            eq("2", specs.custom_source.spec_2_2.vcmd)
-
-            pasync.util.sleep(600)
-
-            specs = tasks.get_specs({ source_name = "custom_source" })
-
-            eq("2", specs.custom_source.spec_2_1.vcmd)
-            eq("3", specs.custom_source.spec_2_2.vcmd)
+            eq("echo 'test'", specs.custom_source.spec_2.vim_cmd)
         end)
+    end)
+
+    it("adds default runners during setup", function()
+        test_helpers.tasks_setup()
+
+        assert.is.truthy(tasks.config.runners.functions)
     end)
 
     describe("get_specs", function()
         it("get specs from a single source", function()
             test_helpers.tasks_setup({
                 sources = {
-                    test = builtin_source.new_builtin_source({
-                        spec_1 = {
-                            vcmd = "echo 'hello'",
+                    test = Source:create({
+                        specs = {
+                            spec_1 = {
+                                vim_cmd = "echo 'hello'",
+                            },
                         },
                     }),
-                    test2 = builtin_source.new_builtin_source({
-                        spec_2 = {
-                            vcmd = "echo 'hello2'",
+                    test2 = Source:create({
+                        specs = {
+                            spec_2 = {
+                                vim_cmd = "echo 'hello2'",
+                            },
                         },
                     }),
                 },
@@ -92,70 +116,7 @@ describe("init", function()
 
             local specs = tasks.get_specs({ source_name = "test2" })
             assert.is.falsy(specs.test)
-            eq("echo 'hello2'", specs.test2.spec_2.vcmd)
-        end)
-
-        it("get specs from a single runner", function()
-            test_helpers.tasks_setup({
-                sources = {
-                    test = builtin_source.new_builtin_source({
-                        spec_1 = {
-                            vcmd = "echo 'hello1'",
-                            runner_name = "runner1",
-                        },
-                        spec_2 = {
-                            vcmd = "echo 'hello2'",
-                            runner_name = "runner2",
-                        },
-                    }),
-                    test2 = builtin_source.new_builtin_source({
-                        spec_2 = {
-                            vcmd = "echo 'hello3'",
-                            runner_name = "runner1",
-                        },
-                        spec_3 = {
-                            vcmd = "echo 'hello4'",
-                        },
-                    }),
-                },
-            })
-
-            local specs = tasks.get_specs({ runner_name = "runner2" })
-            eq(1, #vim.tbl_keys(specs.test))
-            eq(0, #vim.tbl_keys(specs.test2))
-            eq("echo 'hello2'", specs.test.spec_2.vcmd)
-        end)
-
-        it("get specs from a single runner: multiple results", function()
-            test_helpers.tasks_setup({
-                sources = {
-                    test = builtin_source.new_builtin_source({
-                        spec_1 = {
-                            vcmd = "echo 'hello1'",
-                            runner_name = "runner1",
-                        },
-                        spec_2 = {
-                            vcmd = "echo 'hello2'",
-                            runner_name = "runner2",
-                        },
-                    }),
-                    test2 = builtin_source.new_builtin_source({
-                        spec_2 = {
-                            vcmd = "echo 'hello3'",
-                            runner_name = "runner1",
-                        },
-                        spec_3 = {
-                            vcmd = "echo 'hello4'",
-                        },
-                    }),
-                },
-            })
-
-            local specs = tasks.get_specs({ runner_name = "runner1" })
-            eq(1, #vim.tbl_keys(specs.test))
-            eq(1, #vim.tbl_keys(specs.test2))
-            eq("echo 'hello1'", specs.test.spec_1.vcmd)
-            eq("echo 'hello3'", specs.test2.spec_2.vcmd)
+            eq("echo 'hello2'", specs.test2.spec_2.vim_cmd)
         end)
     end)
 
@@ -163,22 +124,26 @@ describe("init", function()
         before_each(function()
             test_helpers.tasks_setup({
                 sources = {
-                    test = builtin_source.new_builtin_source({
-                        wait_stop = {
-                            fn = function(ctx)
-                                ctx.stop_request_receiver()
-                            end,
-                        },
-                        spec_2 = {
-                            vcmd = "echo 'hello2'",
+                    test = Source:create({
+                        specs = {
+                            wait_stop = {
+                                fn = function(ctx)
+                                    ctx.wait_stop_requested()
+                                end,
+                            },
+                            spec_2 = {
+                                vim_cmd = "echo 'hello2'",
+                            },
                         },
                     }),
-                    test2 = builtin_source.new_builtin_source({
-                        spec_2 = {
-                            vcmd = "echo 'hello3'",
-                        },
-                        spec_3 = {
-                            vcmd = "echo 'hello4'",
+                    test2 = Source:create({
+                        specs = {
+                            spec_2 = {
+                                vim_cmd = "echo 'hello3'",
+                            },
+                            spec_3 = {
+                                vim_cmd = "echo 'hello4'",
+                            },
                         },
                     }),
                 },
@@ -191,17 +156,13 @@ describe("init", function()
         end)
 
         it("returns the correct running tasks", function()
-            local task_id = tasks.run("wait_stop")
-
-            eq(1, task_id)
+            tasks.run("wait_stop")
 
             local tasks_running = tasks.get_running_tasks()
             eq(1, #vim.tbl_keys(tasks_running))
 
             -- second run
-            task_id = tasks.run("wait_stop")
-
-            eq(2, task_id)
+            tasks.run("wait_stop")
 
             tasks_running = tasks.get_running_tasks()
             eq(2, #vim.tbl_keys(tasks_running))
@@ -218,34 +179,40 @@ describe("init", function()
         before_each(function()
             test_helpers.tasks_setup({
                 sources = {
-                    test = builtin_source.new_builtin_source({
-                        wait_stop_builtin = {
-                            fn = function(ctx)
-                                ctx.stop_request_receiver()
-                            end,
-                        },
-                        wait_stop_custom = {
-                            fn = function(ctx)
-                                ctx.stop_request_receiver()
-                            end,
-                            runner_name = "custom_runner",
-                        },
-                        wait_stop_custom_2 = {
-                            fn = function(ctx)
-                                ctx.stop_request_receiver()
-                            end,
-                            runner_name = "custom_runner_2",
-                        },
-                        spec_2 = {
-                            vcmd = "echo 'hello2'",
+                    test = Source:create({
+                        specs = {
+                            wait_stop_builtin = {
+                                fn = function(ctx)
+                                    ctx.wait_stop_requested()
+                                end,
+                            },
+                            wait_stop_custom = {
+                                fn = function(ctx)
+                                    ctx.wait_stop_requested()
+                                end,
+                            },
+                            wait_stop_custom_2 = {
+                                fn = function(ctx)
+                                    ctx.wait_stop_requested()
+                                end,
+                            },
+                            spec_2 = {
+                                vim_cmd = "echo 'hello2'",
+                            },
+
+                            invalid_spec = {
+                                test = true,
+                            },
                         },
                     }),
-                    test2 = builtin_source.new_builtin_source({
-                        spec_2 = {
-                            vcmd = "echo 'hello3'",
-                        },
-                        spec_3 = {
-                            vcmd = "echo 'hello4'",
+                    test2 = Source:create({
+                        specs = {
+                            spec_2 = {
+                                vim_cmd = "echo 'hello3'",
+                            },
+                            spec_3 = {
+                                vim_cmd = "echo 'hello4'",
+                            },
                         },
                     }),
                 },
@@ -259,20 +226,19 @@ describe("init", function()
             })
         end)
 
-        it("runs using the builtin runner", function()
-            local task_id, task = tasks.run("wait_stop_builtin")
-            eq(1, task_id)
+        it("runs using the builtin runners", function()
+            local _, task = tasks.run("wait_stop_builtin")
             task:request_stop()
         end)
 
         it("runs using custom runner", function()
-            local task_id, task = tasks.run("wait_stop_custom")
-            eq(1, task_id)
+            local _, task = tasks.run("wait_stop_custom")
             task:request_stop()
         end)
 
-        it("fails if runner not found", function()
-            local task_id, task = tasks.run("wait_stop_custom_2")
+        it("fails if runner cannot resolve", function()
+            tasks.config.runners.custom_runner = nil
+            local task_id, task = tasks.run("invalid_spec")
             eq(nil, task_id)
             eq(nil, task)
         end)
@@ -285,7 +251,6 @@ describe("init", function()
 
         it("sets the last spec correctly", function()
             local task_id, task = tasks.run("wait_stop_builtin")
-            eq(1, task_id)
             task:request_stop()
 
             eq("wait_stop_builtin", tasks.state.last_spec_ran.name)
@@ -294,7 +259,7 @@ describe("init", function()
 
             local new_task_id, new_task = tasks.run_last()
             new_task:request_stop()
-            eq(2, new_task_id)
+            neq(task_id, new_task_id)
             eq("wait_stop_builtin", task:get_spec_name())
             eq("test", task:get_source_name())
         end)
@@ -302,34 +267,36 @@ describe("init", function()
         it("makes use of the router function", function()
             test_helpers.tasks_setup({
                 sources = {
-                    test = builtin_source.new_builtin_source({
-                        wait_stop_builtin = {
-                            fn = function(ctx)
-                                ctx.stop_request_receiver()
-                            end,
-                        },
-                        wait_stop_custom = {
-                            fn = function(ctx)
-                                ctx.stop_request_receiver()
-                            end,
-                            runner_name = "custom_runner",
-                        },
-                        wait_stop_custom_2 = {
-                            fn = function(ctx)
-                                ctx.stop_request_receiver()
-                            end,
-                            runner_name = "custom_runner_2",
-                        },
-                        spec_2 = {
-                            vcmd = "echo 'hello2'",
+                    test = Source:create({
+                        specs = {
+                            wait_stop_builtin = {
+                                fn = function(ctx)
+                                    ctx.wait_stop_requested()
+                                end,
+                            },
+                            wait_stop_custom = {
+                                fn = function(ctx)
+                                    ctx.wait_stop_requested()
+                                end,
+                            },
+                            wait_stop_custom_2 = {
+                                fn = function(ctx)
+                                    ctx.wait_stop_requested()
+                                end,
+                            },
+                            spec_2 = {
+                                vim_cmd = "echo 'hello2'",
+                            },
                         },
                     }),
-                    test2 = builtin_source.new_builtin_source({
-                        spec_2 = {
-                            vcmd = "echo 'hello3'",
-                        },
-                        spec_3 = {
-                            vcmd = "echo 'hello4'",
+                    test2 = Source:create({
+                        specs = {
+                            spec_2 = {
+                                vim_cmd = "echo 'hello3'",
+                            },
+                            spec_3 = {
+                                vim_cmd = "echo 'hello4'",
+                            },
                         },
                     }),
                 },
@@ -347,31 +314,27 @@ describe("init", function()
                     },
                 },
 
-                router = function(name, _spec, _args, _source_name)
+                router = function(name, spec, args, _runners)
                     local router_table = {
                         wait_stop_builtin = "custom_runner",
-                        wait_stop_custom = "builtin",
                     }
 
-                    return router_table[name]
+                    return router_table[name] or priority_router(name, spec, args, default_runners)
                 end,
             })
 
-            local task_id, task = tasks.run("wait_stop_builtin")
+            local _, task = tasks.run("wait_stop_builtin")
             task:request_stop()
-            eq(1, task_id)
             eq("custom_runner", task:get_runner_name())
 
-            task_id, task = tasks.run("wait_stop_custom")
+            _, task = tasks.run("wait_stop_custom")
             task:request_stop()
-            eq(2, task_id)
-            eq("builtin", task:get_runner_name())
+            eq("functions", task:get_runner_name())
+        end)
 
-            -- it still uses the default router if the custom router returns nil
-            task_id, task = tasks.run("wait_stop_custom_2")
-            task:request_stop()
-            eq(3, task_id)
-            eq("custom_runner_2", task:get_runner_name())
+        it("get_task_dependencies", function()
+            local _, task = tasks.run("spec_3")
+            eq(true, task ~= nil)
         end)
     end)
 end)

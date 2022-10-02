@@ -1,51 +1,32 @@
-local Path = require("plenary.path")
 local fs = require("tasks.lib.fs")
-local async = require("tasks.lib.async")
+local Source = require("tasks.lib.source")
+local Path = require("plenary.path")
+local pasync = require("tasks.lib.async")
 
-local M = {}
+return Source:create_from_source_file({
+    script_runner = { "npm", "run" },
+    filename = "package.json",
+    reader = fs.read_json_file,
+    parser = function(self, package)
+        local specs = {}
 
-function M:get_specs(tx)
-    local path = Path:new(vim.loop.cwd()) / "package.json"
+        local cwd = Path:new(vim.loop.cwd())
+        local package_path = pasync.fn.fnamemodify(self.filename, ":h")
 
-    local ok, package = pcall(fs.read_json_file, path.filename)
-    if not ok then
-        return nil
-    end
+        cwd = cwd / package_path
 
-    local specs = {}
+        local scripts = package["scripts"] or {}
 
-    local scripts = package["scripts"] or {}
+        for name, _ in pairs(scripts) do
+            specs[name] = {
+                cmd = vim.tbl_flatten({ self.script_runner, name }),
+                cwd = cwd.filename,
+                env = {},
+            }
+        end
 
-    for name, _ in pairs(scripts) do
-        specs[name] = {
-            cmd = { "npm", "run", name },
-            cwd = vim.loop.cwd(),
-            env = {},
-        }
-    end
+        return specs
+    end,
+})
 
-    if tx ~= nil then
-        tx(specs)
-    end
-
-    return specs
-end
-
-function M:start_specs_listener(tx)
-    local group_name = "TasksNvimNpmSource"
-    vim.api.nvim_create_augroup(group_name, {
-        clear = true,
-    })
-
-    vim.api.nvim_create_autocmd("BufWritePost", {
-        group = group_name,
-        pattern = { "package.json" },
-        callback = function()
-            async.run(function()
-                M:get_specs(tx)
-            end)
-        end,
-    })
-end
-
-return M
+--return M

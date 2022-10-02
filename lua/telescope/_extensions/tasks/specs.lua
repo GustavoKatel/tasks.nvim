@@ -1,10 +1,13 @@
-local action_state = require("telescope.actions.state")
 local actions = require("telescope.actions")
 local finders = require("telescope.finders")
 local pickers = require("telescope.pickers")
+local previewers = require("telescope.previewers")
 local conf = require("telescope.config").values
 
 local tasks = require("tasks")
+
+local tasks_actions = require("telescope._extensions.tasks.actions")
+local tasks_telescope_config = require("telescope._extensions.tasks.config")
 
 -- heavily inspired by: https://github.com/ThePrimeagen/harpoon/blob/master/lua/telescope/_extensions/marks.lua
 
@@ -29,6 +32,10 @@ local generate_new_finder = function(opts)
                 value = entry,
                 display = line,
                 ordinal = line,
+                preview_command = function(entry_preview, bufnr)
+                    local output = vim.split(vim.inspect(entry_preview.value), "\n")
+                    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, output)
+                end,
             }
         end,
     })
@@ -37,20 +44,18 @@ end
 return function(opts)
     opts = opts or {}
 
-    pickers.new(opts, {
-        prompt_title = "tasks: all",
-        finder = generate_new_finder(opts),
-        sorter = conf.generic_sorter(opts),
-        attach_mappings = function(prompt_bufnr, _map)
-            actions.select_default:replace(function()
-                actions.close(prompt_bufnr)
-                local selection = action_state.get_selected_entry()
+    pickers
+        .new(opts, {
+            prompt_title = "tasks: all",
+            finder = generate_new_finder(opts),
+            sorter = conf.generic_sorter(opts),
+            previewer = previewers.display_content.new(opts),
+            attach_mappings = function(prompt_bufnr, map)
+                actions.select_default:replace(tasks_actions.run)
 
-                local entry = selection.value
-
-                tasks.run(entry.spec_name, nil, entry.source_name)
-            end)
-            return true
-        end,
-    }):find()
+                tasks_telescope_config.attach_mappings("specs", prompt_bufnr, map)
+                return true
+            end,
+        })
+        :find()
 end

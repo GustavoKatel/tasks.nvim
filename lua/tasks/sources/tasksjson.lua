@@ -1,8 +1,5 @@
-local Path = require("plenary.path")
 local fs = require("tasks.lib.fs")
-local async = require("tasks.lib.async")
-
-local M = {}
+local Source = require("tasks.lib.source")
 
 local os_name_map = {
     ["Darwin"] = "osx",
@@ -65,9 +62,6 @@ local function json_task_to_spec(index, json_task)
         label = string.format("task %d", index)
     end
 
-    -- TODO: task dependencies
-    -- TODO: env
-
     if type == "shell" then
         local default_shell = vim.env.SHELL or "bash"
 
@@ -81,51 +75,38 @@ local function json_task_to_spec(index, json_task)
         cmd = { cmd, args }
     end
 
-    return label, {
-        cmd = vim.tbl_flatten(cmd),
-        cwd = cwd,
-        original = json_task,
-    }
-end
+    cmd = vim.tbl_flatten({ cmd })
 
--- TODO: parse tasks.json variables
-function M:get_specs(tx)
-    local path = Path:new(vim.loop.cwd()) / ".vscode" / "tasks.json"
-
-    local ok, json = pcall(fs.read_json_file, path.filename)
-    if not ok then
-        return nil
-    end
-
-    local specs = {}
-
-    for i, json_task in ipairs(json.tasks or {}) do
-        local label, spec = json_task_to_spec(i, json_task)
-        specs[label] = spec
-    end
-
-    if tx ~= nil then
-        tx(specs)
-    end
-
-    return specs
-end
-
-function M:start_specs_listener(tx)
-    local group_name = "TasksNvimTasksJsonSource"
-    vim.api.nvim_create_augroup(group_name, {
-        clear = true,
-    })
-
-    vim.api.nvim_create_autocmd("BufWritePost", {
-        group = group_name,
-        pattern = { ".vscode/tasks.json" },
-        callback = function()
-            async.run(function()
-                M:get_specs(tx)
-            end)
+    local dependencies = vim.tbl_map(
+        function(spec_name)
+            return { spec_name = spec_name }
         end,
-    })
+        vim.tbl_filter(function(t)
+            return t ~= nil
+        end, vim.tbl_flatten({ json_task["dependsOn"] or {} }))
+    )
+
+    return label,
+        {
+            cmd = cmd,
+            cwd = cwd,
+            original = json_task,
+            -- wrapping them in a single table, will make them run in parallel
+            dependencies = #dependencies > 0 and { dependencies } or {},
+        }
 end
 
-return M
+return Source:create_from_source_file({
+    filename = ".vscode/tasks.json",
+    reader = fs.read_json_file,
+    parser = function(_self, json)
+        local specs = {}
+        for i, json_task in ipairs(json.tasks or {}) do
+            local label, spec = json_task_to_spec(i, json_task)
+            spec.inputs = json.inputs
+            specs[label] = spec
+        end
+
+        return specs
+    end,
+})

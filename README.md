@@ -7,6 +7,7 @@ Alpha
 Dependencies:
 
 - https://github.com/nvim-lua/plenary.nvim
+- `jsonc` treesitter parser (optional - only needed if you're using the `tasks.json` source)
 
 Neovim versions:
 
@@ -33,7 +34,7 @@ local tasks = require("tasks")
 local source_npm = require("tasks.sources.npm")
 local source_tasksjson = require("tasks.sources.tasksjson")
 
-local builtin = require("tasks.sources.builtin")
+local Source = require("tasks.lib.source")
 
 require("telescope").load_extension("tasks")
 
@@ -41,9 +42,9 @@ tasks.setup({
 	sources = {
 		npm = source_npm,
 		vscode = source_tasksjson,
-		utils = builtin.new_builtin_source({
+		utils = Source:create({ specs = {
 			sleep = {
-				fn = function(ctx)
+				fn = function(ctx, args)
 					local pasync = require("plenary.async")
 
 					pasync.util.sleep(10000)
@@ -57,7 +58,7 @@ tasks.setup({
             shell_cmd = {
                 cmd = "make test"
             }
-		}),
+		}}),
 	},
 })
 
@@ -65,19 +66,47 @@ tasks.setup({
 
 ## Sources
 
-### builtin
-
-the builtin source is just a place holder to allow you to define custom task specs using lua functions, vim commands or shell commands.
-
 ### npm
 
 It will load all `package.json` scripts from the project root to be used as task specs.
+
+Example:
+
+```lua
+local source_npm = require("tasks.sources.npm")
+
+tasks.setup({
+  sources = {
+    ["js/ts (yarn)"] = source_npm:with({ script_runner = { "yarn" } })
+    -- this one will still use npm
+    ["js/ts (npm)"] = source_npm
+    -- using a different package.json path
+    ["subpackage (npm)"] = source_npm:with({ filename = "frontend/app/package.json" })
+  }
+})
+```
 
 ### tasksjson (vscode)
 
 It will load all tasks from `.vscode/tasks.json` to be used as task specs.
 
 There are bunch of things missing from the schema, I believe it's enough to get started. Please open an issue if you think any of the missing features should be added.
+
+### dap
+
+It will load all configurations from `dap.configurations` and also configurations from `launch.json` (See: https://code.visualstudio.com/docs/editor/debugging)
+
+It works well when combined with `tasksjson` when using attributes like `preLaunchTask` and `postDebugTask`.
+
+### cargo
+
+It will provide three specs when it finds a `Cargo.toml` in the root directory.
+
+Specs:
+
+- cargo run
+- cargo watch
+- cargo test
 
 ## Runners
 
@@ -87,36 +116,55 @@ The builtin runner is a generic runner that allows you to run lua functions, vim
 
 It's always available, even if you don't specify in your config.
 
+You can override the builtin runner like so:
+
+```lua
+tasks.setup({
+    ...
+	runners = {
+        -- use a completely different runner:
+        builtin = my_custom_runner
+        -- or override the builtin settings with
+		builtin = runner_builtin:with({ terminal_edit_command = "split" }),
+	},
+})
+```
+
 ### Custom runners
 
 A very minimal custom runner that runs lua functions (async functions) can be created as such:
 
 ```lua
 local Task = require("tasks.lib.task")
+local Runner = require("tasks.lib.runner")
 local tasks = require("tasks")
 
 tasks.setup({
     ...
     runners = {
-        custom_runner = {
+        custom_runner = Runner:create({
             create_task = function(self, spec, args)
-                return Task:new(spec.fn, args)
+                local fn = function(ctx, args)
+                    print("running from custom runner")
+                    local ret = spec.fn(args)
+                    print("custom runner done!")
+                    return ret
+                end
+                return Task:new(fn, args)
             end
-        }
+        })
     },
 
     sources = {
-        my_tasks = builtin.new_builtin_source({
+        my_tasks = Source:create({ specs = {
 			sleep = {
 				fn = function(ctx)
 					local pasync = require("plenary.async")
 
 					pasync.util.sleep(10000)
 				end,
-                -- this prop will route this task to the custom runner
-                runner_name = "custom_runner"
 			},
-		}),
+		}}),
     }
 })
 ```
@@ -163,6 +211,40 @@ The default action will request the task to stop (call `task:request_stop()`).
 
 ![telescope-demo](./demo/telescope_demo_running.png)
 
+#### Default keybindings
+
+The extension provides some default keybindings which you can override like so:
+
+> *Note*
+> this is just to illustrate, don't use as is
+
+```lua
+local tasks_actions = require("telescope._extensions.tasks.actions")
+
+require("telescope").setup({
+    extensions = {
+		tasks = {
+            mappings = {
+                -- mappings for the "running tasks" picker
+                running = {
+                    i = {
+                        <select_default> = tasks_actions.open_buffer({ cmd = { "buffer" } }),
+                        ["<c-c>"] = tasks_actions.request_stop,
+                    },
+                },
+
+                specs = {
+                    i = {
+                        <select_default> = tasks_actions.run,
+                        ["<c-t>"] = tasks_actions.run_with_runner_opts({ terminal_edit_command = "vsplit" }),
+                    },
+                },
+            },
+        }
+    }
+})
+```
+
 ### sidebar.nvim integration
 
 ```lua
@@ -197,13 +279,15 @@ lualine.setup({
 
 ## API
 
-### tasks.run(spec_name, args, source_name)
+### tasks.run(spec_name, args, source_name, runner_opts)
 
 Run the first spec with name `spec_name` additionally passing extra args in `args`
 
 You can also pass `source_name` to refine the search and only run specs from that source.
 
-Returns `task_id` and a task table ([Task](#task-api))
+You can also pass `runner_opts` that will be consumed by the runner.
+
+Returns `task_id` and a task table ([Task](./doc/task.md))
 
 ### tasks.run_last()
 
@@ -252,24 +336,14 @@ Example of return value:
 }
 ```
 
-### task api
+## More docs
 
-A task object has a few helper methods.
+- Task api - [task.md](./doc/task.md)
+- Spec api - [task.md](./doc/spec.md)
+- Source api - [source.md](./doc/source.md)
+- Builtin runner - [runner_builtin.md](./doc/runner_builtin.md)
+- [docs folder](./doc)
 
-### task:get_spec_name()
+## Credits
 
-### task:get_source_name()
-
-### task:get_runner_name()
-
-### task:get_state()
-
-Returns the current task state, which can evolve from `ready` -> `running` -> `done`.
-
-### task:request_stop()
-
-Signal the underlying job that this task should be cancelled.
-
-### task:get_started_time()
-
-### task:get_finished_time()
+Thanks to [yngwi](https://github.com/yngwi) for help testing and providing feedback and ideas in [the Reddit post](https://www.reddit.com/r/neovim/comments/vqsoyo/tasksnvim_yet_another_task_runnermanager_for/)
