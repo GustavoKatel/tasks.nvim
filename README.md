@@ -2,11 +2,13 @@
 
 ## State
 
-Alpha
+Archived
 
 Dependencies:
 
 - https://github.com/nvim-lua/plenary.nvim
+
+Recommended alternative: https://github.com/stevearc/overseer.nvim
 
 Neovim versions:
 
